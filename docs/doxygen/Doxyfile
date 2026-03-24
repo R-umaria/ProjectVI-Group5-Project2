@@ -1,0 +1,5 @@
+PROJECT_NAME = "FleetTelemetrySystem"
+OUTPUT_DIRECTORY = docs/doxygen
+INPUT = src
+RECURSIVE = YES
+GENERATE_LATEX = NO

@@ -1,0 +1,40 @@
+# Visual Studio
+.vs/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build outputs
+Debug/
+Release/
+x64/
+x86/
+out/
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.ipch
+*.tlog
+*.lastbuildstate
+*.log
+*.tmp
+*.cache
+*.exe
+*.dll
+*.lib
+
+# Generated docs/output
+output/logs/*
+!output/logs/.gitkeep
+output/stats/*
+!output/stats/.gitkeep
+output/performance/*
+!output/performance/.gitkeep
+
+# Doxygen generated files
+docs/doxygen/html/
+docs/doxygen/latex/

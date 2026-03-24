@@ -1,0 +1,7 @@
+{
+  "bind_ip": "0.0.0.0",
+  "listen_port": 54000,
+  "max_clients": 32,
+  "log_file": "output/logs/server.log",
+  "stats_file": "output/stats/flight_stats.csv"
+}
