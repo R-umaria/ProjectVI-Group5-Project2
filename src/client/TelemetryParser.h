@@ -8,7 +8,11 @@ namespace FleetTelemetry
     class TelemetryParser
     {
     public:
-        bool IsValid(const TelemetryRecord& record) const;
-        std::string Describe(const TelemetryRecord& record) const;
+        bool ParseLine(const std::string& line,
+            const std::string& aircraftId,
+            TelemetryRecord& outRecord) const;
+
+    private:
+        std::string Trim(const std::string& value) const;
     };
 }

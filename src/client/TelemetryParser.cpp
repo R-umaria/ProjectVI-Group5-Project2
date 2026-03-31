@@ -1,14 +1,74 @@
 #include "TelemetryParser.h"
+#include <sstream>
+#include <cctype>
 
 namespace FleetTelemetry
 {
-    bool TelemetryParser::IsValid(const TelemetryRecord& record) const
+    std::string TelemetryParser::Trim(const std::string& value) const
     {
-        return !record.AircraftId.empty() && !record.Timestamp.empty() && record.FuelQuantity >= 0.0;
+        size_t start = 0;
+        while (start < value.size() &&
+            std::isspace(static_cast<unsigned char>(value[start])))
+        {
+            ++start;
+        }
+
+        size_t end = value.size();
+        while (end > start &&
+            std::isspace(static_cast<unsigned char>(value[end - 1])))
+        {
+            --end;
+        }
+
+        return value.substr(start, end - start);
     }
 
-    std::string TelemetryParser::Describe(const TelemetryRecord& record) const
+    bool TelemetryParser::ParseLine(const std::string& line,
+        const std::string& aircraftId,
+        TelemetryRecord& outRecord) const
     {
-        return record.AircraftId + " @ " + record.Timestamp + " fuel=" + std::to_string(record.FuelQuantity);
+        const std::string trimmedLine = Trim(line);
+
+        if (trimmedLine.empty())
+            return false;
+
+        // Skip header
+        if (trimmedLine.find("FUEL TOTAL QUANTITY") != std::string::npos)
+            return false;
+
+        std::stringstream ss(trimmedLine);
+
+        std::string timestampText;
+        std::string fuelText;
+
+        if (!std::getline(ss, timestampText, ','))
+            return false;
+
+        if (!std::getline(ss, fuelText, ','))
+            return false;
+
+        timestampText = Trim(timestampText);
+        fuelText = Trim(fuelText);
+
+        if (timestampText.empty() || fuelText.empty())
+            return false;
+
+        try
+        {
+            double fuel = std::stod(fuelText);
+
+            if (fuel < 0.0)
+                return false;
+
+            outRecord.AircraftId = aircraftId;
+            outRecord.Timestamp = timestampText;
+            outRecord.FuelQuantity = fuel;
+
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 }

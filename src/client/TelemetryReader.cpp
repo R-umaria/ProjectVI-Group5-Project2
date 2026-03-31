@@ -1,41 +1,58 @@
 #include "TelemetryReader.h"
-#include "../shared/Common.h"
-#include <fstream>
+#include "TelemetryParser.h"
 
 namespace FleetTelemetry
 {
-    std::vector<TelemetryRecord> TelemetryReader::ReadAll(const std::string& filePath) const
+    bool TelemetryReader::Open(const std::string& filePath)
+    {
+        Close();
+        m_input.open(filePath);
+        return m_input.is_open();
+    }
+
+    bool TelemetryReader::ReadNextLine(std::string& outLine)
+    {
+        if (!m_input.is_open())
+            return false;
+
+        return static_cast<bool>(std::getline(m_input, outLine));
+    }
+
+    void TelemetryReader::Close()
+    {
+        if (m_input.is_open())
+            m_input.close();
+    }
+
+    bool TelemetryReader::IsOpen() const
+    {
+        return m_input.is_open();
+    }
+
+    std::vector<TelemetryRecord> TelemetryReader::ReadAll(const std::string& filePath)
     {
         std::vector<TelemetryRecord> records;
-        std::ifstream input(filePath);
-        std::string line;
 
-        while (std::getline(input, line))
+        if (!Open(filePath))
         {
-            if (Trim(line).empty())
-            {
-                continue;
-            }
+            return records;
+        }
 
-            const auto parts = Split(line, ',');
-            if (parts.size() != 3)
-            {
-                continue;
-            }
+        TelemetryParser parser;
+        std::string line;
+        const std::string aircraftId = "AIR-001";
 
-            try
+        while (ReadNextLine(line))
+        {
+            TelemetryRecord record;
+
+            if (parser.ParseLine(line, aircraftId, record))
             {
-                TelemetryRecord record;
-                record.AircraftId = Trim(parts[0]);
-                record.Timestamp = Trim(parts[1]);
-                record.FuelQuantity = std::stod(Trim(parts[2]));
                 records.push_back(record);
-            }
-            catch (...)
-            {
             }
         }
 
+        Close();
         return records;
     }
 }
