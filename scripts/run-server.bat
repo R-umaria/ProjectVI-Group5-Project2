@@ -1,11 +1,15 @@
 @echo off
 setlocal
 pushd %~dp0..\
-if not exist x64\Debug\ServerApp.exe (
+
+set EXE=x64\Debug\ServerApp.exe
+if not exist %EXE% set EXE=x64\Release\ServerApp.exe
+if not exist %EXE% (
   echo Build the solution first from Visual Studio.
   popd
   exit /b 1
 )
-start "ServerApp" x64\Debug\ServerApp.exe
+
+start "ServerApp" %EXE%
 popd
 endlocal

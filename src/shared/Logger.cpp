@@ -1,5 +1,6 @@
 #include "Logger.h"
 #include <ctime>
+#include <iostream>
 
 namespace FleetTelemetry
 {
@@ -23,12 +24,6 @@ namespace FleetTelemetry
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        std::ofstream output(m_filePath, std::ios::app);
-        if (!output)
-        {
-            return;
-        }
-
         std::time_t now = std::time(nullptr);
         std::tm localTime{};
 #ifdef _WIN32
@@ -36,8 +31,18 @@ namespace FleetTelemetry
 #else
         localTime = *std::localtime(&now);
 #endif
-        output << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
-               << " [" << level << "] "
-               << message << std::endl;
+
+        std::ostringstream line;
+        line << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
+             << " [" << level << "] "
+             << message;
+
+        std::ofstream output(m_filePath, std::ios::app);
+        if (output)
+        {
+            output << line.str() << std::endl;
+        }
+
+        std::cout << line.str() << std::endl;
     }
 }

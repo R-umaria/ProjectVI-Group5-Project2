@@ -12,7 +12,11 @@ namespace FleetTelemetry
         double StartFuel = 0.0;
         double EndFuel = 0.0;
         double FuelConsumed = 0.0;
-        double AverageFuelConsumptionPerSample = 0.0;
+        double CurrentFuelConsumptionPerSecond = 0.0;
+        double AverageFuelConsumptionPerSecond = 0.0;
+        double AverageFuelConsumptionPerHour = 0.0;
+        double TotalFlightSeconds = 0.0;
         int SampleCount = 0;
+        bool Completed = false;
     };
 }

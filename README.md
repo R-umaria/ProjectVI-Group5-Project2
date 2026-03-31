@@ -1,12 +1,23 @@
 # Fleet Telemetry System
 
-A Visual Studio bootstrap for the CSCN73060 client-server fleet telemetry project.
+A working Visual Studio baseline for the CSCN73060 client-server fleet telemetry project.
 
-## Solution Layout
+## What is implemented
 
-- **ClientApp**: console client that reads telemetry data and sends packets to the server.
-- **ServerApp**: console server scaffold for multi-client processing.
-- **SharedLib**: shared models, logging, config loading, and packet helpers.
+- TCP client-server communication over sockets
+- Thread-per-client server listener and worker model
+- Client telemetry file replay with validation and ordered transmission
+- Server-side packet parsing and per-aircraft flight tracking
+- Real-time fuel consumption calculation using fuel delta over elapsed time
+- End-of-flight CSV persistence without overwriting prior completed flights
+- Config-driven startup plus optional command-line overrides
+- Windows batch scripts for local runs and performance-test style launches
+
+## Solution layout
+
+- **ClientApp**: console client that reads telemetry data and sends packets to the server
+- **ServerApp**: console server for multi-client telemetry processing
+- **SharedLib**: shared packet, config, logging, and utility code
 
 ## Open in Visual Studio
 
@@ -15,7 +26,7 @@ A Visual Studio bootstrap for the CSCN73060 client-server fleet telemetry projec
 3. Build the solution
 4. Set `ServerApp` as startup project to run the server, or `ClientApp` to run the client
 
-## Runtime Folders
+## Runtime folders
 
 - `config/` for client and server configuration
 - `data/` for telemetry inputs
@@ -23,8 +34,44 @@ A Visual Studio bootstrap for the CSCN73060 client-server fleet telemetry projec
 - `output/stats/` for generated statistics
 - `output/performance/` for performance test artifacts
 
+## Client usage
+
+Default run uses `config/client.config.json`.
+
+Example:
+
+```bash
+ClientApp.exe --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt --aircraft-id AIR-1001 --send-interval-ms 25
+```
+
+Supported arguments:
+
+- `--server-ip`
+- `--server-port`
+- `--telemetry-file`
+- `--aircraft-id`
+- `--send-interval-ms`
+
+## Server usage
+
+Default run uses `config/server.config.json`.
+
+Example:
+
+```bash
+ServerApp.exe --bind-ip 0.0.0.0 --listen-port 54000 --stats-file output/stats/flight_stats.csv
+```
+
+Supported arguments:
+
+- `--bind-ip`
+- `--listen-port`
+- `--stats-file`
+- `--log-file`
+
 ## Notes
 
-- This scaffold is intentionally lightweight so the team can iterate quickly.
-- The networking and telemetry logic are placeholders that compile cleanly and are ready to extend.
-- Project paths are configured relative to the solution directory to reduce setup friction.
+- Each client execution represents one flight session.
+- The server appends completed flights to `output/stats/flight_stats.csv`.
+- Logs are written to `output/logs/` and mirrored to the console.
+- For distributed performance testing, update client IP settings to the actual server machine address.

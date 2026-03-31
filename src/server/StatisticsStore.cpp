@@ -4,7 +4,50 @@
 
 namespace FleetTelemetry
 {
-    bool StatisticsStore::SaveCsv(const std::string& filePath, const std::unordered_map<std::string, FlightStatistics>& stats) const
+    namespace
+    {
+        void WriteHeader(std::ofstream& output)
+        {
+            output << "AircraftId,StartTimestamp,EndTimestamp,StartFuel,EndFuel,FuelConsumed,CurrentFuelConsumptionPerSecond,AverageFuelConsumptionPerSecond,AverageFuelConsumptionPerHour,TotalFlightSeconds,SampleCount,Completed\n";
+        }
+
+        void WriteStatsRow(std::ofstream& output, const FlightStatistics& value)
+        {
+            output << value.AircraftId << ','
+                   << value.StartTimestamp << ','
+                   << value.EndTimestamp << ','
+                   << value.StartFuel << ','
+                   << value.EndFuel << ','
+                   << value.FuelConsumed << ','
+                   << value.CurrentFuelConsumptionPerSecond << ','
+                   << value.AverageFuelConsumptionPerSecond << ','
+                   << value.AverageFuelConsumptionPerHour << ','
+                   << value.TotalFlightSeconds << ','
+                   << value.SampleCount << ','
+                   << (value.Completed ? "true" : "false") << '\n';
+        }
+    }
+
+    bool StatisticsStore::AppendFlightCsv(const std::string& filePath, const FlightStatistics& stats) const
+    {
+        std::filesystem::create_directories(std::filesystem::path(filePath).parent_path());
+        const bool fileExists = std::filesystem::exists(filePath) && std::filesystem::file_size(filePath) > 0;
+
+        std::ofstream output(filePath, std::ios::app);
+        if (!output)
+        {
+            return false;
+        }
+
+        if (!fileExists)
+        {
+            WriteHeader(output);
+        }
+        WriteStatsRow(output, stats);
+        return true;
+    }
+
+    bool StatisticsStore::SaveSnapshotCsv(const std::string& filePath, const std::unordered_map<std::string, FlightStatistics>& stats) const
     {
         std::filesystem::create_directories(std::filesystem::path(filePath).parent_path());
         std::ofstream output(filePath);
@@ -13,17 +56,10 @@ namespace FleetTelemetry
             return false;
         }
 
-        output << "AircraftId,StartTimestamp,EndTimestamp,StartFuel,EndFuel,FuelConsumed,AverageFuelConsumptionPerSample,SampleCount\n";
-        for (const auto& [_, value] : stats)
+        WriteHeader(output);
+        for (const auto& entry : stats)
         {
-            output << value.AircraftId << ','
-                   << value.StartTimestamp << ','
-                   << value.EndTimestamp << ','
-                   << value.StartFuel << ','
-                   << value.EndFuel << ','
-                   << value.FuelConsumed << ','
-                   << value.AverageFuelConsumptionPerSample << ','
-                   << value.SampleCount << '\n';
+            WriteStatsRow(output, entry.second);
         }
 
         return true;
