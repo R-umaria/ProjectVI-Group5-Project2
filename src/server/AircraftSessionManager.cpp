@@ -22,6 +22,24 @@ namespace FleetTelemetry
             return false;
         }
 
+        //UPDATING THE CULMATIVE FLIGHT HISTORY
+        auto& history = m_aircraftHistory[aircraftId];
+        history.AircraftId = aircraftId;
+        history.FlightCount += 1;
+        history.CumulativeFuelConsumed += outStatistics.FuelConsumed;
+        history.CumulativeTotalSeconds += outStatistics.TotalFlightSeconds;
+        if (history.CumulativeTotalSeconds > 0.0)
+        {
+            const double avgPerSec = history.CumulativeFuelConsumed / history.CumulativeTotalSeconds;
+            history.OverallAverageFuelConsumptionPerHour = avgPerSec * 3600.0;
+        }
+        outStatistics.FlightCount = history.FlightCount;
+        outStatistics.CumulativeFuelConsumed = history.CumulativeFuelConsumed;
+        outStatistics.CumulativeTotalSeconds = history.CumulativeTotalSeconds;
+        outStatistics.OverallAverageFuelConsumptionPerHour = history.OverallAverageFuelConsumptionPerHour;
+
+
+
         if (!m_statisticsStore.AppendFlightCsv(m_statsFilePath, outStatistics))
         {
             m_logger.Error("Failed to persist flight statistics for " + aircraftId);

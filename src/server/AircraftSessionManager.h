@@ -24,5 +24,8 @@ namespace FleetTelemetry
         mutable std::mutex m_mutex;
         TelemetryProcessor m_processor;
         StatisticsStore m_statisticsStore;
+
+        //for the overall stats per plane with multiple flightds
+        std::unordered_map<std::string, FlightStatistics> m_aircraftHistory;
     };
 }
