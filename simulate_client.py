@@ -1,3 +1,6 @@
+# run it in a different terminal with this command:
+# python simulate_client.py 127.0.0.1 //or whatever host you want
+
 import socket, time, sys
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
