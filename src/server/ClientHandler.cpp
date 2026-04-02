@@ -63,7 +63,9 @@ namespace FleetTelemetry
             {
                 m_logger.Info(
                     "Flight completed for " + aircraftId +
-                    ". Average fuel consumption/hour = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour));
+                    " (flight #" + std::to_string(finalStatistics.FlightCount) + ")" +
+                    ". This flight avg fuel/hr = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour) +
+                    ". Overall avg fuel/hr (for all flights this plane has done) = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour));
             }
         }
 

@@ -14,6 +14,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ServerApp", "ServerApp\Serv
 		{C8D53B6B-8EE4-4C40-9A41-111111111111} = {C8D53B6B-8EE4-4C40-9A41-111111111111}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2F0FB112-D45E-426F-8ED6-6BEA58EAD821}"
+	ProjectSection(SolutionItems) = preProject
+		simulate_client.py = simulate_client.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
