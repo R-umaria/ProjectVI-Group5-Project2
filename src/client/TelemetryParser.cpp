@@ -1,7 +1,6 @@
 #include "TelemetryParser.h"
 #include "../shared/Common.h"
 #include <sstream>
-#include <cctype>
 
 namespace FleetTelemetry
 {
@@ -29,6 +28,7 @@ namespace FleetTelemetry
             {
                 return false;
             }
+
             workingLine = Trim(workingLine.substr(commaPosition + 1));
         }
 
