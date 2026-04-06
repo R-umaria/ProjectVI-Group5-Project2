@@ -9,6 +9,7 @@ namespace FleetTelemetry
     class StatisticsStore
     {
     public:
-        bool SaveCsv(const std::string& filePath, const std::unordered_map<std::string, FlightStatistics>& stats) const;
+        bool AppendFlightCsv(const std::string& filePath, const FlightStatistics& stats) const;
+        bool SaveSnapshotCsv(const std::string& filePath, const std::unordered_map<std::string, FlightStatistics>& stats) const;
     };
 }

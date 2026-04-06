@@ -5,6 +5,6 @@ namespace FleetTelemetry
     class ClientApp
     {
     public:
-        int Run() const;
+        int Run(int argc, char* argv[]) const;
     };
 }

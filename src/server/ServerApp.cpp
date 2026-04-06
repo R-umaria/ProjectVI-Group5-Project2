@@ -1,48 +1,112 @@
 #include "ServerApp.h"
 #include "ServerListener.h"
-#include "PacketReceiver.h"
+#include "ClientHandler.h"
 #include "AircraftSessionManager.h"
-#include "StatisticsStore.h"
 #include "../shared/Config.h"
 #include "../shared/Logger.h"
+#include "../shared/Common.h"
+#include <thread>
 #include <vector>
+#include <memory>
 
 namespace FleetTelemetry
 {
-    int ServerApp::Run() const
+    namespace
+    {
+        struct RuntimeOptions
+        {
+            std::string BindIp;
+            int ListenPort = 0;
+            std::string StatsFile;
+            std::string LogFile;
+        };
+
+        RuntimeOptions ResolveRuntimeOptions(const ServerConfig& config, int argc, char* argv[])
+        {
+            RuntimeOptions options;
+            options.BindIp = config.BindIp;
+            options.ListenPort = config.ListenPort;
+            options.StatsFile = config.StatsFile;
+            options.LogFile = config.LogFile;
+
+            for (int index = 1; index < argc; ++index)
+            {
+                const std::string argument = argv[index];
+                auto readValue = [&](std::string& target)
+                {
+                    if (index + 1 < argc)
+                    {
+                        target = argv[++index];
+                    }
+                };
+
+                if (argument == "--bind-ip")
+                {
+                    readValue(options.BindIp);
+                }
+                else if (argument == "--listen-port")
+                {
+                    if (index + 1 < argc)
+                    {
+                        options.ListenPort = std::stoi(argv[++index]);
+                    }
+                }
+                else if (argument == "--stats-file")
+                {
+                    readValue(options.StatsFile);
+                }
+                else if (argument == "--log-file")
+                {
+                    readValue(options.LogFile);
+                }
+            }
+
+            return options;
+        }
+    }
+
+    int ServerApp::Run(int argc, char* argv[]) const
     {
         const auto config = Config::LoadServerConfig("config/server.config.json");
-        Logger logger(config.LogFile);
+        const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
+
+        Logger logger(options.LogFile);
         logger.Info("Server starting");
 
         ServerListener listener;
-        listener.Start(config.ListenPort);
-
-        // Placeholder packets so the scaffold shows end-to-end flow before socket code is implemented.
-        const std::vector<std::string> samplePackets =
+        std::string listenerError;
+        if (!listener.Start(options.BindIp, options.ListenPort, &listenerError))
         {
-            "AC001,2026-03-10T10:00:00Z,5200.0",
-            "AC001,2026-03-10T10:00:05Z,5197.5",
-            "AC002,2026-03-10T10:00:00Z,6100.0"
-        };
-
-        PacketReceiver receiver;
-        AircraftSessionManager sessions;
-        for (const auto& packet : samplePackets)
-        {
-            TelemetryRecord record;
-            if (receiver.ParseIncoming(packet, record))
-            {
-                sessions.AcceptRecord(record);
-                logger.Info("Processed packet for " + record.AircraftId);
-            }
+            logger.Error("Failed to start listener: " + listenerError);
+            return 1;
         }
 
-        StatisticsStore store;
-        store.SaveCsv(config.StatsFile, sessions.GetProcessor().GetCurrentStatistics());
+        logger.Info("Server listening on " + options.BindIp + ":" + std::to_string(options.ListenPort));
+        logger.Info("Persisting completed flight statistics to " + options.StatsFile);
 
-        listener.Stop();
-        logger.Info("Server stopped");
+        AircraftSessionManager sessions(options.StatsFile, logger);
+        std::vector<std::thread> workerThreads;
+
+        while (true)
+        {
+            SocketHandle clientSocket = InvalidSocket;
+            std::string remoteAddress;
+            std::string acceptError;
+
+            if (!listener.Accept(clientSocket, remoteAddress, &acceptError))
+            {
+                logger.Error("Accept failed: " + acceptError);
+                continue;
+            }
+
+            workerThreads.emplace_back([clientSocket, remoteAddress, &sessions, &logger]() mutable
+            {
+                ClientHandler handler(clientSocket, std::move(remoteAddress), sessions, logger);
+                handler.Run();
+            });
+            workerThreads.back().detach();
+        }
+
         return 0;
     }
 }
