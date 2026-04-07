@@ -15,8 +15,6 @@ namespace FleetTelemetry
         void Close();
         bool IsOpen() const;
 
-        std::vector<TelemetryRecord> ReadAll(const std::string& filePath);
-
     private:
         std::ifstream m_input;
     };
