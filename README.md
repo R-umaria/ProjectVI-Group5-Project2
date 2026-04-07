@@ -75,3 +75,9 @@ Supported arguments:
 - The server appends completed flights to `output/stats/flight_stats.csv`.
 - Logs are written to `output/logs/` and mirrored to the console.
 - For distributed performance testing, update client IP settings to the actual server machine address.
+
+
+## Client identity and log files
+- Each client process now receives a unique aircraft ID at startup unless `--aircraft-id` is explicitly provided.
+- Each client session writes to its own log file in `output/logs/`, with the filename including the aircraft ID, process ID, and session timestamp.
+- Load, spike, and endurance batch scripts now pass unique `--aircraft-id` values so concurrent test runs remain analytically valid.

@@ -8,10 +8,16 @@
 #include "../shared/Common.h"
 #include <thread>
 #include <string>
-#include <cstdlib>
-#include <ctime>
 #include <sstream>
 #include <vector>
+#include <chrono>
+#include <cctype>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace FleetTelemetry
 {
@@ -24,6 +30,7 @@ namespace FleetTelemetry
             std::string TelemetryFile;
             std::string AircraftId;
             int SendIntervalMs = 0;
+            bool AircraftIdProvidedByUser = false;
         };
 
         std::string MakeSafeFileToken(std::string value)
@@ -38,14 +45,39 @@ namespace FleetTelemetry
             return value;
         }
 
-        std::string GenerateAircraftId(const std::string& prefix)
+        unsigned long GetProcessIdValue()
         {
-            std::srand(static_cast<unsigned int>(std::time(nullptr)) ^ static_cast<unsigned int>(std::clock()));
-            const int randomValue = std::rand() % 100000;
+#ifdef _WIN32
+            return static_cast<unsigned long>(::GetCurrentProcessId());
+#else
+            return static_cast<unsigned long>(::getpid());
+#endif
+        }
+
+        long long GetSessionTimestampMs()
+        {
+            return static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count());
+        }
+
+        std::string BuildUniqueAircraftId(const std::string& prefix)
+        {
+            const std::string normalizedPrefix = MakeSafeFileToken(prefix.empty() ? "AIR" : prefix);
             std::ostringstream stream;
-            stream << (prefix.empty() ? "AIR" : prefix)
-                   << "-" << static_cast<long long>(std::time(nullptr))
-                   << "-" << randomValue;
+            stream << normalizedPrefix
+                   << "-PID" << GetProcessIdValue()
+                   << "-T" << GetSessionTimestampMs();
+            return stream.str();
+        }
+
+        std::string BuildClientLogPath(const std::string& aircraftId)
+        {
+            std::ostringstream stream;
+            stream << "output/logs/client_"
+                   << MakeSafeFileToken(aircraftId)
+                   << "_pid" << GetProcessIdValue()
+                   << "_session" << GetSessionTimestampMs()
+                   << ".log";
             return stream.str();
         }
 
@@ -56,7 +88,8 @@ namespace FleetTelemetry
             options.ServerPort = config.ServerPort;
             options.TelemetryFile = config.TelemetryFile;
             options.SendIntervalMs = config.SendIntervalMs;
-            options.AircraftId = config.ClientName;
+
+            std::string aircraftIdPrefix = config.ClientName;
 
             for (int index = 1; index < argc; ++index)
             {
@@ -87,6 +120,7 @@ namespace FleetTelemetry
                 else if (argument == "--aircraft-id")
                 {
                     readValue(options.AircraftId);
+                    options.AircraftIdProvidedByUser = !options.AircraftId.empty();
                 }
                 else if (argument == "--send-interval-ms")
                 {
@@ -102,13 +136,13 @@ namespace FleetTelemetry
                 options.TelemetryFile = "data/sample/telemetry_1.txt";
             }
 
-            if (options.AircraftId.empty())
+            if (!options.AircraftIdProvidedByUser)
             {
-                options.AircraftId = GenerateAircraftId("AIR");
-            }
-            else if (options.AircraftId.find("Client-") == 0 || options.AircraftId.find("Client") == 0)
-            {
-                options.AircraftId = GenerateAircraftId(options.AircraftId);
+                if (aircraftIdPrefix.empty())
+                {
+                    aircraftIdPrefix = "AIR";
+                }
+                options.AircraftId = BuildUniqueAircraftId(aircraftIdPrefix);
             }
 
             if (options.SendIntervalMs < 0)
@@ -125,11 +159,12 @@ namespace FleetTelemetry
         const auto config = Config::LoadClientConfig("config/client.config.json");
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
-        Logger logger("output/logs/client_" + MakeSafeFileToken(options.AircraftId) + ".log");
+        Logger logger(BuildClientLogPath(options.AircraftId));
         logger.Info("Client starting");
         logger.Info("Aircraft ID: " + options.AircraftId);
         logger.Info("Telemetry file: " + options.TelemetryFile);
         logger.Info("Server endpoint: " + options.ServerIp + ":" + std::to_string(options.ServerPort));
+        logger.Info(std::string("Aircraft ID source: ") + (options.AircraftIdProvidedByUser ? "command line" : "generated at startup"));
 
         TelemetryReader reader;
         if (!reader.Open(options.TelemetryFile))
