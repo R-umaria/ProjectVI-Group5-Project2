@@ -38,19 +38,34 @@ A working Visual Studio baseline for the CSCN73060 client-server fleet telemetry
 
 Default run uses `config/client.config.json`.
 
-Example:
+Single client example:
 
 ```bash
-ClientApp.exe --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt --aircraft-id AIR-1001 --send-interval-ms 25
+ClientApp.exe --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt --aircraft-id AIRCRAFT-1001 --send-interval-ms 25
 ```
 
-Supported arguments:
+Launcher example for a deterministic ID range:
+
+```bash
+ClientApp.exe --client-count 25 --aircraft-start 1001 --aircraft-end 1025 --aircraft-prefix AIRCRAFT --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt
+```
+
+When launcher arguments are used, the parent process spawns separate client processes. Each child process still represents one flight session.
+
+Supported single-client arguments:
 
 - `--server-ip`
 - `--server-port`
 - `--telemetry-file`
 - `--aircraft-id`
 - `--send-interval-ms`
+
+Supported launcher arguments:
+
+- `--client-count`
+- `--aircraft-start`
+- `--aircraft-end`
+- `--aircraft-prefix`
 
 ## Server usage
 
@@ -71,13 +86,34 @@ Supported arguments:
 
 ## Notes
 
-- Each client execution represents one flight session.
+- Each spawned child client process represents one flight session.
 - The server appends completed flights to `output/stats/flight_stats.csv`.
 - Logs are written to `output/logs/` and mirrored to the console.
 - For distributed performance testing, update client IP settings to the actual server machine address.
 
+## Batch files for professor-style testing
+
+The repo root now includes batch files aligned with the project instructions:
+
+- `LoadTest_Batch.bat`
+- `EnduranceTest_Batch.bat`
+- `SpikeTest_Batch.bat`
+
+Examples:
+
+```bat
+LoadTest_Batch.bat 25 1001 AIRCRAFT 192.168.1.10 54000 data\sample\telemetry_1.txt
+```
+
+This spawns 25 client processes with IDs `AIRCRAFT-1001` through `AIRCRAFT-1025`.
+
+```bat
+EnduranceTest_Batch.bat 100 2001 250 AIR-END 192.168.1.10 54000 data\sample\telemetry_2.txt
+```
+
+This continuously spawns waves of 100 clients, starting wave 1 at `AIR-END-2001`, then the next wave continues the numbering.
 
 ## Client identity and log files
-- Each client process now receives a unique aircraft ID at startup unless `--aircraft-id` is explicitly provided.
-- Each client session writes to its own log file in `output/logs/`, with the filename including the aircraft ID, process ID, and session timestamp.
-- Load, spike, and endurance batch scripts now pass unique `--aircraft-id` values so concurrent test runs remain analytically valid.
+- Each client process receives a unique aircraft ID at startup unless `--aircraft-id` is explicitly provided.
+- Each client session writes to its own log file in `output/logs/`.
+- Load, spike, and endurance batch scripts pass deterministic `--aircraft-id` values so concurrent test runs remain analytically valid and easy to trace.

@@ -12,10 +12,15 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
-#include <random>
 #include <filesystem>
 #include <iostream>
 #include <mutex>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace FleetTelemetry
 {
@@ -47,18 +52,23 @@ namespace FleetTelemetry
             }
         }
 
+        unsigned long GetCurrentProcessIdValue()
+        {
+#ifdef _WIN32
+            return static_cast<unsigned long>(::GetCurrentProcessId());
+#else
+            return static_cast<unsigned long>(::getpid());
+#endif
+        }
+
         std::string BuildGeneratedAircraftId()
         {
-            const auto nowValue = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-            std::random_device randomDevice;
-            const unsigned int randomValue = randomDevice();
+            const auto nowValue = std::chrono::system_clock::now().time_since_epoch();
+            const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(nowValue).count();
 
             std::ostringstream stream;
-            stream << "AIRCRAFT-"
-                   << std::hex << std::uppercase
-                   << static_cast<unsigned long long>(nowValue)
-                   << '-'
-                   << randomValue;
+            stream << "AIRCRAFT-P" << GetCurrentProcessIdValue()
+                   << "-T" << milliseconds;
             return stream.str();
         }
 

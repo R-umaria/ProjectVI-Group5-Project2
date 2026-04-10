@@ -6,9 +6,10 @@ These changes keep the project aligned with the client-server fleet telemetry re
 ## Implemented changes
 
 ### Client
-- Restored **one client process = one flight execution** by simplifying `src/client/main.cpp`.
+- Restored **one client process = one flight execution** for normal runs.
+- Added an explicit launcher mode in `src/client/main.cpp` that can spawn a deterministic aircraft-ID range as separate child processes when `--client-count` and range arguments are used.
 - Preserved `--aircraft-id` values from scripts instead of overriding them internally.
-- Improved auto-generated aircraft IDs so they are less collision-prone when no ID is provided.
+- Improved auto-generated aircraft IDs so they are more readable when no ID is provided.
 - Stopped forcing a random telemetry file every run.
   - The configured or command-line file is used first.
   - Random selection is only used when the file is missing or `--random-telemetry-file` is supplied.
@@ -37,3 +38,7 @@ These changes keep the project aligned with the client-server fleet telemetry re
 ## Validation performed
 - Source-level build validation using `g++ -std=c++17` for both the client and server translation units on this environment.
 - The project remains structured for Visual Studio solution builds.
+
+### Batch-test compatibility
+- Added professor-style batch files at the repo root: `LoadTest_Batch.bat`, `EnduranceTest_Batch.bat`, and `SpikeTest_Batch.bat`.
+- These scripts generate deterministic aircraft IDs from a chosen numeric start value, making it easy to verify that a specific aircraft domain was spawned during testing.
