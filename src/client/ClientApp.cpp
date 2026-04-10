@@ -7,6 +7,7 @@
 #include "../shared/Logger.h"
 #include "../shared/Common.h"
 
+#include <algorithm>
 #include <thread>
 #include <string>
 #include <sstream>
@@ -114,9 +115,8 @@ namespace FleetTelemetry
                 return "data/sample/telemetry_1.txt";
             }
 
-            static thread_local std::mt19937 generator(std::random_device{}());
-            std::uniform_int_distribution<std::size_t> distribution(0, files.size() - 1);
-            return files[distribution(generator)];
+            std::sort(files.begin(), files.end());
+            return files.front();
         }
 
         RuntimeOptions ResolveRuntimeOptions(const ClientConfig& config, int argc, char* argv[])

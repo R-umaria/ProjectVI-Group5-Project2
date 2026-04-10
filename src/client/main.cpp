@@ -1,6 +1,5 @@
 #include "ClientApp.h"
 
-#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -8,6 +7,9 @@
 #include <vector>
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -17,7 +19,6 @@ namespace
     {
         bool LauncherMode = false;
         bool ClientCountProvided = false;
-        bool AircraftStartProvided = false;
         bool AircraftEndProvided = false;
 
         int ClientCount = 1;
@@ -63,12 +64,11 @@ namespace
             else if (argument == "--aircraft-start" && index + 1 < argc)
             {
                 options.AircraftStart = ParseIntOrDefault(argv[++index], 1);
-                options.AircraftStartProvided = true;
                 options.LauncherMode = true;
             }
             else if (argument == "--aircraft-end" && index + 1 < argc)
             {
-                options.AircraftEnd = ParseIntOrDefault(argv[++index], options.AircraftEnd);
+                options.AircraftEnd = ParseIntOrDefault(argv[++index], 1);
                 options.AircraftEndProvided = true;
                 options.LauncherMode = true;
             }
@@ -100,7 +100,6 @@ namespace
         }
 
         const int availableIds = options.AircraftEnd - options.AircraftStart + 1;
-
         if (!options.ClientCountProvided)
         {
             options.ClientCount = availableIds;
@@ -144,15 +143,22 @@ namespace
         for (int index = 1; index < argc; ++index)
         {
             const std::string argument = argv[index];
+
             if (argument == "--aircraft-id")
             {
-                ++index;
+                if (index + 1 < argc)
+                {
+                    ++index;
+                }
                 continue;
             }
 
             if (IsLauncherArgument(argument))
             {
-                ++index;
+                if (index + 1 < argc)
+                {
+                    ++index;
+                }
                 continue;
             }
 
@@ -173,7 +179,7 @@ namespace
         std::string escaped = "\"";
         for (char ch : value)
         {
-            if (ch == '\"')
+            if (ch == '"')
             {
                 escaped += "\\\"";
             }
@@ -182,7 +188,7 @@ namespace
                 escaped += ch;
             }
         }
-        escaped += '\"';
+        escaped += '"';
         return escaped;
     }
 
@@ -199,6 +205,9 @@ namespace
 
         STARTUPINFOA startupInfo{};
         startupInfo.cb = sizeof(startupInfo);
+        startupInfo.dwFlags = STARTF_USESHOWWINDOW;
+        startupInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+
         PROCESS_INFORMATION processInfo{};
 
         const BOOL created = CreateProcessA(
@@ -207,7 +216,7 @@ namespace
             nullptr,
             nullptr,
             FALSE,
-            CREATE_NEW_CONSOLE | CREATE_MINIMIZED,
+            CREATE_NEW_CONSOLE,
             nullptr,
             nullptr,
             &startupInfo,
@@ -260,11 +269,12 @@ namespace
             }
         }
 
+        const int lastAircraftNumber = options.AircraftStart + ((launchedCount > 0) ? (launchedCount - 1) : 0);
         std::cout << "Launched " << launchedCount
                   << " client process(es) covering IDs "
                   << BuildAircraftId(options.AircraftPrefix, options.AircraftStart)
                   << " to "
-                  << BuildAircraftId(options.AircraftPrefix, options.AircraftStart + std::max(launchedCount - 1, 0))
+                  << BuildAircraftId(options.AircraftPrefix, lastAircraftNumber)
                   << ".\n";
 
         return launchedCount > 0 ? 0 : 1;
