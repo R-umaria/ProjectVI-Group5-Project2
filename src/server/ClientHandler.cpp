@@ -20,6 +20,7 @@ namespace FleetTelemetry
         std::string receiveError;
         std::string aircraftId;
         int processedPackets = 0;
+        int malformedPackets = 0;
 
         m_logger.Info("Client connected from " + m_remoteAddress);
 
@@ -33,7 +34,11 @@ namespace FleetTelemetry
             TelemetryRecord record;
             if (!m_packetReceiver.ParseIncoming(packetText, record))
             {
-                m_logger.Error("Malformed packet discarded from " + m_remoteAddress + ": " + packetText);
+                ++malformedPackets;
+                if (malformedPackets <= 3)
+                {
+                    m_logger.Error("Malformed packet discarded from " + m_remoteAddress + ": " + packetText);
+                }
                 continue;
             }
 
@@ -45,15 +50,18 @@ namespace FleetTelemetry
 
             m_sessionManager.AcceptRecord(record);
             ++processedPackets;
-            if (processedPackets == 1 || processedPackets % 100 == 0)
-            {
-                m_logger.Info("Processed packets for " + record.AircraftId + ": " + std::to_string(processedPackets));
-            }
         }
 
         if (!receiveError.empty())
         {
             m_logger.Error("Connection ended for " + (aircraftId.empty() ? m_remoteAddress : aircraftId) + ": " + receiveError);
+        }
+
+        if (malformedPackets > 3)
+        {
+            m_logger.Error("Additional malformed packets suppressed for "
+                + (aircraftId.empty() ? m_remoteAddress : aircraftId)
+                + ": " + std::to_string(malformedPackets - 3));
         }
 
         if (!aircraftId.empty())
@@ -64,8 +72,9 @@ namespace FleetTelemetry
                 m_logger.Info(
                     "Flight completed for " + aircraftId +
                     " (flight #" + std::to_string(finalStatistics.FlightCount) + ")" +
+                    ". Packets processed = " + std::to_string(processedPackets) +
                     ". This flight avg fuel/hr = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour) +
-                    ". Overall avg fuel/hr (for all flights this plane has done) = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour));
+                    ". Overall avg fuel/hr = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour));
             }
         }
 

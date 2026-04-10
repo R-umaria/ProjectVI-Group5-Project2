@@ -12,12 +12,9 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
-#include <cctype>
 #include <random>
-#include <atomic>
 #include <filesystem>
 #include <iostream>
-#include <iomanip>
 #include <mutex>
 
 namespace FleetTelemetry
@@ -32,23 +29,38 @@ namespace FleetTelemetry
             std::string AircraftId;
             int SendIntervalMs = 0;
             bool AircraftIdProvidedByUser = false;
+            bool VerboseRecords = false;
+            bool UseRandomTelemetryFile = false;
         };
 
-        std::atomic<int> g_aircraftSequence{ 0 };
         std::mutex g_consoleMutex;
 
-        std::string BuildReadableAircraftId()
+        int ParseIntOrDefault(const char* text, int fallback)
         {
-            const int id = ++g_aircraftSequence;
-
-            std::ostringstream stream;
-            stream << "AIRCRAFT-" << std::setw(3) << std::setfill('0') << id;
-            return stream.str();
+            try
+            {
+                return std::stoi(text);
+            }
+            catch (...)
+            {
+                return fallback;
+            }
         }
 
-#include <filesystem>
-#include <vector>
-#include <string>
+        std::string BuildGeneratedAircraftId()
+        {
+            const auto nowValue = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+            std::random_device randomDevice;
+            const unsigned int randomValue = randomDevice();
+
+            std::ostringstream stream;
+            stream << "AIRCRAFT-"
+                   << std::hex << std::uppercase
+                   << static_cast<unsigned long long>(nowValue)
+                   << '-'
+                   << randomValue;
+            return stream.str();
+        }
 
         std::vector<std::string> FindTelemetryFiles(const std::string& directoryPath)
         {
@@ -87,17 +99,14 @@ namespace FleetTelemetry
         std::string SelectRandomTelemetryFile()
         {
             std::vector<std::string> files = FindTelemetryFiles("data/sample");
-
             if (files.empty())
             {
                 return "data/sample/telemetry_1.txt";
             }
 
-            static thread_local std::mt19937 gen(std::random_device{}());
-            std::uniform_int_distribution<std::size_t> dist(0, files.size() - 1);
-            std::cout << "Found " << files.size() << " telemetry files in data/sample\n";
-            
-            return files[dist(gen)];
+            static thread_local std::mt19937 generator(std::random_device{}());
+            std::uniform_int_distribution<std::size_t> distribution(0, files.size() - 1);
+            return files[distribution(generator)];
         }
 
         RuntimeOptions ResolveRuntimeOptions(const ClientConfig& config, int argc, char* argv[])
@@ -113,23 +122,20 @@ namespace FleetTelemetry
                 const std::string argument = argv[index];
 
                 auto readValue = [&](std::string& target)
+                {
+                    if (index + 1 < argc)
                     {
-                        if (index + 1 < argc)
-                        {
-                            target = argv[++index];
-                        }
-                    };
+                        target = argv[++index];
+                    }
+                };
 
                 if (argument == "--server-ip")
                 {
                     readValue(options.ServerIp);
                 }
-                else if (argument == "--server-port")
+                else if (argument == "--server-port" && index + 1 < argc)
                 {
-                    if (index + 1 < argc)
-                    {
-                        options.ServerPort = std::stoi(argv[++index]);
-                    }
+                    options.ServerPort = ParseIntOrDefault(argv[++index], options.ServerPort);
                 }
                 else if (argument == "--telemetry-file")
                 {
@@ -140,20 +146,30 @@ namespace FleetTelemetry
                     readValue(options.AircraftId);
                     options.AircraftIdProvidedByUser = !options.AircraftId.empty();
                 }
-                else if (argument == "--send-interval-ms")
+                else if (argument == "--send-interval-ms" && index + 1 < argc)
                 {
-                    if (index + 1 < argc)
-                    {
-                        options.SendIntervalMs = std::stoi(argv[++index]);
-                    }
+                    options.SendIntervalMs = ParseIntOrDefault(argv[++index], options.SendIntervalMs);
+                }
+                else if (argument == "--verbose-records")
+                {
+                    options.VerboseRecords = true;
+                }
+                else if (argument == "--random-telemetry-file")
+                {
+                    options.UseRandomTelemetryFile = true;
                 }
             }
 
-            options.TelemetryFile = SelectRandomTelemetryFile();
+            if (options.UseRandomTelemetryFile ||
+                options.TelemetryFile.empty() ||
+                !std::filesystem::exists(options.TelemetryFile))
+            {
+                options.TelemetryFile = SelectRandomTelemetryFile();
+            }
 
             if (!options.AircraftIdProvidedByUser)
             {
-                options.AircraftId = BuildReadableAircraftId();
+                options.AircraftId = BuildGeneratedAircraftId();
             }
 
             if (options.SendIntervalMs < 0)
@@ -171,30 +187,37 @@ namespace FleetTelemetry
             std::cout << "Client Started\n";
             std::cout << "Airplane ID   : " << options.AircraftId << "\n";
             std::cout << "Telemetry File: " << options.TelemetryFile << "\n";
+            std::cout << "Server        : " << options.ServerIp << ':' << options.ServerPort << "\n";
             std::cout << "==================================================\n";
         }
 
         void PrintParsedRecord(const TelemetryRecord& record)
         {
             std::lock_guard<std::mutex> lock(g_consoleMutex);
-            std::cout << "[" << record.AircraftId << "] "
-                << "Timestamp: " << record.Timestamp
-                << " | Fuel Quantity: " << record.FuelQuantity
-                << "\n";
+            std::cout << '[' << record.AircraftId << "] Timestamp: " << record.Timestamp
+                      << " | Fuel Quantity: " << record.FuelQuantity << "\n";
         }
 
         void PrintClientFooter(const std::string& aircraftId,
             int totalLines,
             int sentRecords,
-            int skippedLines)
+            int skippedLines,
+            bool completedTransmission)
         {
             std::lock_guard<std::mutex> lock(g_consoleMutex);
             std::cout << "--------------------------------------------------\n";
             std::cout << "Client Finished: " << aircraftId << "\n";
             std::cout << "Total input lines: " << totalLines << "\n";
-            std::cout << "Records parsed   : " << sentRecords << "\n";
+            std::cout << "Records sent     : " << sentRecords << "\n";
             std::cout << "Lines skipped    : " << skippedLines << "\n";
-            std::cout << "EOF reached. File closed. Client terminated.\n";
+            if (completedTransmission)
+            {
+                std::cout << "EOF reached. File closed. Client terminated.\n";
+            }
+            else
+            {
+                std::cout << "Transmission terminated safely before EOF.\n";
+            }
             std::cout << "--------------------------------------------------\n";
         }
     }
@@ -204,7 +227,7 @@ namespace FleetTelemetry
         const auto config = Config::LoadClientConfig("config/client.config.json");
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
-        Logger logger("output/logs/" + options.AircraftId + ".log");
+        Logger logger("output/logs/" + options.AircraftId + ".log", false);
         logger.Info("Client starting");
         logger.Info("Aircraft ID: " + options.AircraftId);
         logger.Info("Telemetry file: " + options.TelemetryFile);
@@ -218,34 +241,31 @@ namespace FleetTelemetry
 
             std::lock_guard<std::mutex> lock(g_consoleMutex);
             std::cout << "ERROR: Unable to open telemetry file: "
-                << options.TelemetryFile << "\n";
+                      << options.TelemetryFile << "\n";
             return 1;
         }
 
         ClientSocket socket;
         std::string socketError;
-        bool serverConnected = false;
-
-        if (socket.Connect(options.ServerIp, options.ServerPort, &socketError))
-        {
-            serverConnected = true;
-            logger.Info("Connection established");
-        }
-        else
+        if (!socket.Connect(options.ServerIp, options.ServerPort, &socketError))
         {
             logger.Error("Connection failed: " + socketError);
             std::lock_guard<std::mutex> lock(g_consoleMutex);
-            std::cout << "NOTE: Server connection failed for "
-                << options.AircraftId
-                << ". Continuing in display-only mode.\n";
+            std::cout << "ERROR: Unable to connect to server for "
+                      << options.AircraftId << ": " << socketError << "\n";
+            reader.Close();
+            return 1;
         }
+
+        logger.Info("Connection established");
 
         TelemetryParser parser;
         PacketBuilder builder;
         std::string line;
         int totalLines = 0;
-        int parsedRecords = 0;
+        int sentRecords = 0;
         int skippedLines = 0;
+        bool transmissionComplete = true;
 
         while (reader.ReadNextLine(line))
         {
@@ -258,23 +278,24 @@ namespace FleetTelemetry
                 continue;
             }
 
-            ++parsedRecords;
-            PrintParsedRecord(record);
-
-            if (serverConnected)
+            if (options.VerboseRecords)
             {
-                const std::string packet = builder.Build(record);
-                if (!socket.SendLine(packet, &socketError))
-                {
-                    logger.Error("Transmission interrupted: " + socketError);
-                    std::lock_guard<std::mutex> lock(g_consoleMutex);
-                    std::cout << "WARNING: Send failed for "
-                        << options.AircraftId
-                        << ". Continuing local display only.\n";
-                    socket.Disconnect();
-                    serverConnected = false;
-                }
+                PrintParsedRecord(record);
             }
+
+            const std::string packet = builder.Build(record);
+            if (!socket.SendLine(packet, &socketError))
+            {
+                logger.Error("Transmission interrupted: " + socketError);
+                std::lock_guard<std::mutex> lock(g_consoleMutex);
+                std::cout << "WARNING: Send failed for "
+                          << options.AircraftId
+                          << ". Client is terminating safely.\n";
+                transmissionComplete = false;
+                break;
+            }
+
+            ++sentRecords;
 
             if (options.SendIntervalMs > 0)
             {
@@ -283,18 +304,14 @@ namespace FleetTelemetry
         }
 
         reader.Close();
-
-        if (serverConnected)
-        {
-            socket.Disconnect();
-        }
+        socket.Disconnect();
 
         logger.Info("Client completed flight replay");
         logger.Info("Total input lines: " + std::to_string(totalLines));
-        logger.Info("Records parsed: " + std::to_string(parsedRecords));
+        logger.Info("Records sent: " + std::to_string(sentRecords));
         logger.Info("Lines skipped: " + std::to_string(skippedLines));
 
-        PrintClientFooter(options.AircraftId, totalLines, parsedRecords, skippedLines);
-        return 0;
+        PrintClientFooter(options.AircraftId, totalLines, sentRecords, skippedLines, transmissionComplete);
+        return transmissionComplete ? 0 : 1;
     }
 }

@@ -6,8 +6,6 @@
 #include "../shared/Logger.h"
 #include "../shared/Common.h"
 #include <thread>
-#include <vector>
-#include <memory>
 
 namespace FleetTelemetry
 {
@@ -70,7 +68,7 @@ namespace FleetTelemetry
         const auto config = Config::LoadServerConfig("config/server.config.json");
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
-        Logger logger(options.LogFile);
+        Logger logger(options.LogFile, true);
         logger.Info("Server starting");
 
         ServerListener listener;
@@ -85,7 +83,6 @@ namespace FleetTelemetry
         logger.Info("Persisting completed flight statistics to " + options.StatsFile);
 
         AircraftSessionManager sessions(options.StatsFile, logger);
-        std::vector<std::thread> workerThreads;
 
         while (true)
         {
@@ -99,12 +96,11 @@ namespace FleetTelemetry
                 continue;
             }
 
-            workerThreads.emplace_back([clientSocket, remoteAddress, &sessions, &logger]() mutable
+            std::thread([clientSocket, remoteAddress, &sessions, &logger]() mutable
             {
                 ClientHandler handler(clientSocket, std::move(remoteAddress), sessions, logger);
                 handler.Run();
-            });
-            workerThreads.back().detach();
+            }).detach();
         }
 
         return 0;

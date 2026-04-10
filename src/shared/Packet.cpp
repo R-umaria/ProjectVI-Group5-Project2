@@ -17,18 +17,30 @@ namespace FleetTelemetry
 
     bool Packet::Deserialize(const std::string& packetText, TelemetryRecord& outRecord)
     {
-        const auto parts = Split(packetText, ',');
-        if (parts.size() < 3)
+        const std::size_t firstComma = packetText.find(',');
+        if (firstComma == std::string::npos)
+        {
+            return false;
+        }
+
+        const std::size_t secondComma = packetText.find(',', firstComma + 1);
+        if (secondComma == std::string::npos)
+        {
+            return false;
+        }
+
+        outRecord.AircraftId = Trim(packetText.substr(0, firstComma));
+        outRecord.Timestamp = Trim(packetText.substr(firstComma + 1, secondComma - firstComma - 1));
+
+        if (outRecord.AircraftId.empty() || outRecord.Timestamp.empty())
         {
             return false;
         }
 
         try
         {
-            outRecord.AircraftId = Trim(parts[0]);
-            outRecord.Timestamp = Trim(parts[1]);
-            outRecord.FuelQuantity = std::stod(Trim(parts[2]));
-            return !outRecord.AircraftId.empty() && !outRecord.Timestamp.empty();
+            outRecord.FuelQuantity = std::stod(Trim(packetText.substr(secondComma + 1)));
+            return true;
         }
         catch (...)
         {

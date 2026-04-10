@@ -2,7 +2,6 @@
 
 #include "../shared/TelemetryRecord.h"
 #include "../shared/FlightStatistics.h"
-#include <unordered_map>
 #include <ctime>
 
 namespace FleetTelemetry
@@ -10,11 +9,6 @@ namespace FleetTelemetry
     class TelemetryProcessor
     {
     public:
-        void Process(const TelemetryRecord& record);
-        bool FinalizeFlight(const std::string& aircraftId, FlightStatistics& outStatistics);
-        std::unordered_map<std::string, FlightStatistics> GetCurrentStatistics() const;
-
-    private:
         struct FlightState
         {
             FlightStatistics Statistics;
@@ -23,6 +17,7 @@ namespace FleetTelemetry
             bool HasPreviousSample = false;
         };
 
-        std::unordered_map<std::string, FlightState> m_activeFlights;
+        void ProcessRecord(FlightState& flightState, const TelemetryRecord& record) const;
+        void FinalizeFlight(FlightState& flightState, FlightStatistics& outStatistics) const;
     };
 }

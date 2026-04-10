@@ -4,9 +4,8 @@
 
 namespace FleetTelemetry
 {
-    void TelemetryProcessor::Process(const TelemetryRecord& record)
+    void TelemetryProcessor::ProcessRecord(FlightState& flightState, const TelemetryRecord& record) const
     {
-        auto& flightState = m_activeFlights[record.AircraftId];
         auto& stats = flightState.Statistics;
 
         if (stats.SampleCount == 0)
@@ -63,33 +62,17 @@ namespace FleetTelemetry
         flightState.PreviousFuelQuantity = record.FuelQuantity;
     }
 
-    bool TelemetryProcessor::FinalizeFlight(const std::string& aircraftId, FlightStatistics& outStatistics)
+    void TelemetryProcessor::FinalizeFlight(FlightState& flightState, FlightStatistics& outStatistics) const
     {
-        const auto iterator = m_activeFlights.find(aircraftId);
-        if (iterator == m_activeFlights.end())
-        {
-            return false;
-        }
-
-        outStatistics = iterator->second.Statistics;
+        outStatistics = flightState.Statistics;
         outStatistics.Completed = true;
-        outStatistics.FuelConsumed = std::max(outStatistics.FuelConsumed, std::max(0.0, outStatistics.StartFuel - outStatistics.EndFuel));
+        outStatistics.FuelConsumed = std::max(outStatistics.FuelConsumed,
+            std::max(0.0, outStatistics.StartFuel - outStatistics.EndFuel));
+
         if (outStatistics.TotalFlightSeconds > 0.0)
         {
             outStatistics.AverageFuelConsumptionPerSecond = outStatistics.FuelConsumed / outStatistics.TotalFlightSeconds;
             outStatistics.AverageFuelConsumptionPerHour = outStatistics.AverageFuelConsumptionPerSecond * 3600.0;
         }
-        m_activeFlights.erase(iterator);
-        return true;
-    }
-
-    std::unordered_map<std::string, FlightStatistics> TelemetryProcessor::GetCurrentStatistics() const
-    {
-        std::unordered_map<std::string, FlightStatistics> snapshot;
-        for (const auto& entry : m_activeFlights)
-        {
-            snapshot.emplace(entry.first, entry.second.Statistics);
-        }
-        return snapshot;
     }
 }

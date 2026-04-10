@@ -4,8 +4,10 @@
 #include "StatisticsStore.h"
 #include "../shared/TelemetryRecord.h"
 #include "../shared/Logger.h"
+#include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 
 namespace FleetTelemetry
 {
@@ -19,13 +21,31 @@ namespace FleetTelemetry
         std::unordered_map<std::string, FlightStatistics> GetActiveStatisticsSnapshot() const;
 
     private:
+        struct SessionEntry
+        {
+            mutable std::mutex Mutex;
+            TelemetryProcessor::FlightState Flight;
+        };
+
+        struct AircraftHistoryEntry
+        {
+            int FlightCount = 0;
+            double CumulativeFuelConsumed = 0.0;
+            double CumulativeTotalSeconds = 0.0;
+            double OverallAverageFuelConsumptionPerHour = 0.0;
+        };
+
+        std::shared_ptr<SessionEntry> FindOrCreateSession(const std::string& aircraftId);
+
         std::string m_statsFilePath;
         Logger& m_logger;
-        mutable std::mutex m_mutex;
         TelemetryProcessor m_processor;
         StatisticsStore m_statisticsStore;
 
-        //for the overall stats per plane with multiple flightds
-        std::unordered_map<std::string, FlightStatistics> m_aircraftHistory;
+        mutable std::mutex m_sessionsMutex;
+        std::unordered_map<std::string, std::shared_ptr<SessionEntry>> m_activeSessions;
+
+        mutable std::mutex m_historyMutex;
+        std::unordered_map<std::string, AircraftHistoryEntry> m_aircraftHistory;
     };
 }
