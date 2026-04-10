@@ -51,21 +51,47 @@ namespace FleetTelemetry
             }
         }
 
-        if (!receiveError.empty())
+        const bool crashed = !receiveError.empty();
+
+        if (crashed)
         {
-            m_logger.Error("Connection ended for " + (aircraftId.empty() ? m_remoteAddress : aircraftId) + ": " + receiveError);
+            m_logger.Error("Client crashed/disconnected for " +
+                (aircraftId.empty() ? m_remoteAddress : aircraftId) +
+                ": " + receiveError);
+        }
+        else
+        {
+            m_logger.Info("Client disconnected normally for " +
+                (aircraftId.empty() ? m_remoteAddress : aircraftId));
         }
 
         if (!aircraftId.empty())
         {
             FlightStatistics finalStatistics;
-            if (m_sessionManager.CompleteFlight(aircraftId, finalStatistics))
+            if (!aircraftId.empty())
             {
-                m_logger.Info(
-                    "Flight completed for " + aircraftId +
-                    " (flight #" + std::to_string(finalStatistics.FlightCount) + ")" +
-                    ". This flight avg fuel/hr = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour) +
-                    ". Overall avg fuel/hr (for all flights this plane has done) = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour));
+                FlightStatistics finalStatistics;
+
+                if (m_sessionManager.CompleteFlight(aircraftId, crashed, finalStatistics))
+                {
+                    if (crashed)
+                    {
+                        m_logger.Info(
+                            "Partial flight saved for crashed client " + aircraftId +
+                            " | Samples: " + std::to_string(finalStatistics.SampleCount) +
+                            " | Fuel: " + std::to_string(finalStatistics.FuelConsumed));
+                    }
+                    else
+                    {
+                        m_logger.Info(
+                            "Flight completed for " + aircraftId +
+                            " | Avg fuel/hr: " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour));
+                    }
+                }
+                else
+                {
+                    m_logger.Error("Failed to finalize flight for " + aircraftId);
+                }
             }
         }
 

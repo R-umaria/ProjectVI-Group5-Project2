@@ -14,10 +14,10 @@ namespace FleetTelemetry
         m_processor.Process(record);
     }
 
-    bool AircraftSessionManager::CompleteFlight(const std::string& aircraftId, FlightStatistics& outStatistics)
+    bool AircraftSessionManager::CompleteFlight(const std::string& aircraftId, bool crashed, FlightStatistics& outStatistics)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_processor.FinalizeFlight(aircraftId, outStatistics))
+        if (!m_processor.FinalizeFlight(aircraftId, crashed, outStatistics))
         {
             return false;
         }
