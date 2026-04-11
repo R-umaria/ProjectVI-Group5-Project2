@@ -376,7 +376,7 @@ namespace FleetTelemetry
         const auto config = Config::LoadClientConfig(configPath.string());
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
-        const auto logPath = FleetTelemetry::PathUtils::ResolveWritablePath("output/logs/" + options.AircraftId + ".log");
+        const auto logPath = FleetTelemetry::PathUtils::ResolveWritablePath("output/logs/clients/" + options.AircraftId + ".log");
         Logger logger(logPath.string(), false);
         logger.Info("Client starting");
         logger.Info("Aircraft ID: " + options.AircraftId);

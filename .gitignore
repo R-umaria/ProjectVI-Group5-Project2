@@ -20,20 +20,22 @@ out/
 *.ipch
 *.tlog
 *.lastbuildstate
-*.log
-*.tmp
 *.cache
 *.exe
 *.dll
 *.lib
 
-# Generated docs/output
-output/logs/*
-!output/logs/.gitkeep
+# Generated logs, stats, performance artifacts, and runtime state
+output/logs/clients/*
+!output/logs/clients/.gitkeep
+output/logs/server/*
+!output/logs/server/.gitkeep
 output/stats/*
 !output/stats/.gitkeep
 output/performance/*
 !output/performance/.gitkeep
+output/state/*
+!output/state/.gitkeep
 
 # Doxygen generated files
 docs/doxygen/html/

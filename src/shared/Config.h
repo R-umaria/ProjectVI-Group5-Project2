@@ -9,7 +9,7 @@ namespace FleetTelemetry
         std::string ServerIp = "127.0.0.1";
         int ServerPort = 54000;
         std::string TelemetryFile = "data/sample/Telemetry_Data_Sample.txt";
-        std::string ClientName = "Client-01";
+        std::string ClientName = "AIR";
         int SendIntervalMs = 250;
     };
 
@@ -18,7 +18,7 @@ namespace FleetTelemetry
         std::string BindIp = "0.0.0.0";
         int ListenPort = 54000;
         int MaxClients = 32;
-        std::string LogFile = "output/logs/server.log";
+        std::string LogFile = "output/logs/server/server.log";
         std::string StatsFile = "output/stats/flight_stats.csv";
     };
 

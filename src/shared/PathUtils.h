@@ -46,6 +46,60 @@ namespace FleetTelemetry
             return executablePath.parent_path();
         }
 
+        inline bool LooksLikeProjectRoot(const std::filesystem::path& directory)
+        {
+            namespace fs = std::filesystem;
+            if (directory.empty() || !fs::exists(directory) || !fs::is_directory(directory))
+            {
+                return false;
+            }
+
+            return fs::exists(directory / "FleetTelemetrySystem.sln")
+                || (fs::exists(directory / "config/client.config.json")
+                    && fs::exists(directory / "config/server.config.json"));
+        }
+
+        inline std::filesystem::path FindProjectRootDirectory()
+        {
+            namespace fs = std::filesystem;
+
+            const std::vector<fs::path> seeds =
+            {
+                fs::current_path(),
+                GetExecutableDirectory()
+            };
+
+            for (auto seed : seeds)
+            {
+                if (seed.empty())
+                {
+                    continue;
+                }
+
+                if (!fs::is_directory(seed))
+                {
+                    seed = seed.parent_path();
+                }
+
+                while (!seed.empty())
+                {
+                    if (LooksLikeProjectRoot(seed))
+                    {
+                        return seed;
+                    }
+
+                    const fs::path parent = seed.parent_path();
+                    if (parent == seed)
+                    {
+                        break;
+                    }
+                    seed = parent;
+                }
+            }
+
+            return GetExecutableDirectory();
+        }
+
         inline std::filesystem::path ResolveExistingPath(const std::string& configuredPath)
         {
             namespace fs = std::filesystem;
@@ -61,11 +115,13 @@ namespace FleetTelemetry
                 return inputPath;
             }
 
+            const fs::path projectRoot = FindProjectRootDirectory();
             const fs::path currentDir = fs::current_path();
             const fs::path exeDir = GetExecutableDirectory();
 
             const std::vector<fs::path> bases =
             {
+                projectRoot,
                 currentDir,
                 exeDir,
                 exeDir.parent_path(),
@@ -106,33 +162,13 @@ namespace FleetTelemetry
                 return inputPath;
             }
 
-            const fs::path currentDir = fs::current_path();
-            const fs::path exeDir = GetExecutableDirectory();
-
-            const std::vector<fs::path> bases =
+            const fs::path projectRoot = FindProjectRootDirectory();
+            if (!projectRoot.empty())
             {
-                currentDir,
-                exeDir.parent_path().parent_path(),
-                exeDir,
-                currentDir.parent_path().parent_path()
-            };
-
-            for (const auto& base : bases)
-            {
-                if (base.empty())
-                {
-                    continue;
-                }
-
-                const fs::path candidate = (base / inputPath).lexically_normal();
-                const fs::path parent = candidate.parent_path();
-                if (parent.empty() || fs::exists(parent))
-                {
-                    return candidate;
-                }
+                return (projectRoot / inputPath).lexically_normal();
             }
 
-            return (exeDir / inputPath).lexically_normal();
+            return (GetExecutableDirectory() / inputPath).lexically_normal();
         }
     }
 }

@@ -2,6 +2,6 @@
   "bind_ip": "0.0.0.0",
   "listen_port": 54000,
   "max_clients": 256,
-  "log_file": "output/logs/server.log",
+  "log_file": "output/logs/server/server.log",
   "stats_file": "output/stats/flight_stats.csv"
 }

@@ -1,119 +1,167 @@
 # Fleet Telemetry System
 
-A working Visual Studio baseline for the CSCN73060 client-server fleet telemetry project.
+Client-server fleet telemetry system for CSCN73060. The client replays aircraft telemetry records over TCP, and the server processes concurrent client sessions, computes fuel consumption statistics, and stores completed flight results.
 
-## What is implemented
+## Current project structure
 
-- TCP client-server communication over sockets
-- Thread-per-client server listener and worker model
-- Client telemetry file replay with validation and ordered transmission
-- Server-side packet parsing and per-aircraft flight tracking
-- Real-time fuel consumption calculation using fuel delta over elapsed time
-- End-of-flight CSV persistence without overwriting prior completed flights
-- Config-driven startup plus optional command-line overrides
-- Windows batch scripts for local runs and performance-test style launches
+- `src/client/` - client source code
+- `src/server/` - server source code
+- `src/shared/` - shared packet, config, logging, and utility code
+- `config/` - client and server configuration files
+- `data/sample/` - telemetry input files used by the client
+- `output/logs/server/` - server log file
+- `output/logs/clients/` - one log file per client session
+- `output/stats/` - generated CSV statistics files
+- `output/performance/` - performance-test artifacts
+- `output/state/` - runtime state used for generated aircraft IDs
+- `LoadTest_Batch.bat`, `EnduranceTest_Batch.bat`, `SpikeTest_Batch.bat` - the only batch files kept in the repo
 
-## Solution layout
+## Output locations
 
-- **ClientApp**: console client that reads telemetry data and sends packets to the server
-- **ServerApp**: console server for multi-client telemetry processing
-- **SharedLib**: shared packet, config, logging, and utility code
+All generated runtime files are now written under the project root `output/` directory.
 
-## Open in Visual Studio
+- Server log: `output/logs/server/server.log`
+- Client logs: `output/logs/clients/<Aircraft_ID>.log`
+- Flight statistics CSV: `output/stats/flight_stats.csv`
+- Aircraft history CSV: `output/stats/aircraft_history.csv`
 
-1. Open `FleetTelemetrySystem.sln`
-2. Select **Debug** or **Release**
-3. Build the solution
-4. Set `ServerApp` as startup project to run the server, or `ClientApp` to run the client
+This keeps logs and CSV files in one place even when `Client.exe` or `Server.exe` is started from `x64\Release`.
 
-## Runtime folders
+## Build the solution
 
-- `config/` for client and server configuration
-- `data/` for telemetry inputs
-- `output/logs/` for logs
-- `output/stats/` for generated statistics
-- `output/performance/` for performance test artifacts
+1. Open `FleetTelemetrySystem.sln` in Visual Studio.
+2. Select `Release | x64`.
+3. Build the solution.
+4. After build, the executables are generated in `x64\Release\`.
 
-## Client usage
+Expected executables after build:
 
-Default run uses `config/client.config.json`.
+- `x64\Release\Server.exe`
+- `x64\Release\Client.exe`
 
-Single client example:
+## Start the server
 
-```bash
-ClientApp.exe --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt --aircraft-id AIRCRAFT-1001 --send-interval-ms 25
+### Option 1 - from Visual Studio
+
+1. Set `ServerApp` as the startup project.
+2. Run in `Release | x64`.
+
+### Option 2 - from the built executable
+
+Open Command Prompt in `x64\Release` and run:
+
+```bat
+Server.exe
 ```
 
-Launcher example for a deterministic ID range:
+Optional server arguments:
 
-```bash
-ClientApp.exe --client-count 25 --aircraft-start 1001 --aircraft-end 1025 --aircraft-prefix AIRCRAFT --server-ip 192.168.1.10 --server-port 54000 --telemetry-file data/sample/telemetry_1.txt
+```bat
+Server.exe --bind-ip 0.0.0.0 --listen-port 54000
 ```
 
-When launcher arguments are used, the parent process spawns separate client processes. Each child process still represents one flight session.
+## Start the client
 
-Supported single-client arguments:
+Open Command Prompt in `x64\Release` and run one of the following.
 
-- `--server-ip`
-- `--server-port`
-- `--telemetry-file`
-- `--aircraft-id`
-- `--send-interval-ms`
+### Single client
 
-Supported launcher arguments:
-
-- `--client-count`
-- `--aircraft-start`
-- `--aircraft-end`
-- `--aircraft-prefix`
-
-## Server usage
-
-Default run uses `config/server.config.json`.
-
-Example:
-
-```bash
-ServerApp.exe --bind-ip 0.0.0.0 --listen-port 54000 --stats-file output/stats/flight_stats.csv
+```bat
+Client.exe --server-ip localhost --server-port 54000 --send-interval-ms 1000
 ```
 
-Supported arguments:
+If `--telemetry-file` is not provided, the client selects a random telemetry file from `data/sample/`.
 
-- `--bind-ip`
-- `--listen-port`
-- `--stats-file`
-- `--log-file`
+Example with an explicit file:
 
-## Notes
+```bat
+Client.exe --server-ip localhost --server-port 54000 --telemetry-file data/sample/telemetry_1.txt --send-interval-ms 1000
+```
 
-- Each spawned child client process represents one flight session.
-- The server appends completed flights to `output/stats/flight_stats.csv`.
-- Logs are written to `output/logs/` and mirrored to the console.
-- For distributed performance testing, update client IP settings to the actual server machine address.
+### Multiple clients using the built-in client launcher
 
-## Batch files for professor-style testing
+```bat
+Client.exe --client-count 3 --aircraft-start 1 --aircraft-end 3 --send-interval-ms 1000 --server-ip localhost --server-port 54000
+```
 
-The repo root now includes batch files aligned with the project instructions:
+This command spawns three client processes. The generated aircraft IDs use the simple format:
+
+- `Aircraft_001`
+- `Aircraft_002`
+- `Aircraft_003`
+
+## Batch test files
+
+Only these batch files are kept in the repo:
 
 - `LoadTest_Batch.bat`
 - `EnduranceTest_Batch.bat`
 - `SpikeTest_Batch.bat`
 
-Examples:
+### How to use the batch files
+
+1. Build the solution first.
+2. Copy the required batch file into `x64\Release`.
+3. Open Command Prompt in `x64\Release`.
+4. Run the batch file.
+
+### Load test
+
+Default behavior matches the professor-style load script by spawning multiple `Client.exe` processes.
 
 ```bat
-LoadTest_Batch.bat 25 1001 AIRCRAFT 192.168.1.10 54000 data\sample\telemetry_1.txt
+LoadTest_Batch.bat --server localhost --port 54000
 ```
 
-This spawns 25 client processes with IDs `AIRCRAFT-1001` through `AIRCRAFT-1025`.
+Optional arguments:
 
 ```bat
-EnduranceTest_Batch.bat 100 2001 250 AIR-END 192.168.1.10 54000 data\sample\telemetry_2.txt
+LoadTest_Batch.bat --count 25 --server localhost --port 54000 --send-interval-ms 25
 ```
 
-This continuously spawns waves of 100 clients, starting wave 1 at `AIR-END-2001`, then the next wave continues the numbering.
+### Endurance test
 
-## Client identity and log files
-- Each client process receives a unique aircraft ID at startup unless `--aircraft-id` is explicitly provided.
-- Each client session writes to its own log file in `output/logs/`.
-- Load, spike, and endurance batch scripts pass deterministic `--aircraft-id` values so concurrent test runs remain analytically valid and easy to trace.
+```bat
+EnduranceTest_Batch.bat --server localhost --port 54000
+```
+
+Optional arguments:
+
+```bat
+EnduranceTest_Batch.bat --count 100 --timeout-seconds 250 --server localhost --port 54000 --send-interval-ms 25
+```
+
+### Spike test
+
+```bat
+SpikeTest_Batch.bat --server localhost --port 54000
+```
+
+Optional arguments:
+
+```bat
+SpikeTest_Batch.bat --count 100 --server localhost --port 54000 --send-interval-ms 25
+```
+
+### Optional telemetry-file override for any batch file
+
+```bat
+LoadTest_Batch.bat --server localhost --port 54000 --telemetry-file data/sample/telemetry_2.txt
+```
+
+If `--telemetry-file` is omitted, each spawned client chooses a random telemetry file automatically.
+
+## Notes about IDs and logs
+
+- Automatically generated aircraft IDs use the format `Aircraft_001`, `Aircraft_002`, and so on.
+- Each client session writes to its own log file in `output/logs/clients/`.
+- The server writes its log to `output/logs/server/server.log`.
+- Completed flight results are appended to `output/stats/flight_stats.csv`.
+- Cumulative per-aircraft history is stored in `output/stats/aircraft_history.csv`.
+
+## Default configuration files
+
+- Client config: `config/client.config.json`
+- Server config: `config/server.config.json`
+
+The client and server can be started with config defaults only, or you can override settings with command-line arguments.
