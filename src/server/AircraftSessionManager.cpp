@@ -76,6 +76,13 @@ namespace FleetTelemetry
         return true;
     }
 
+
+    std::size_t AircraftSessionManager::GetActiveSessionCount() const
+    {
+        std::lock_guard<std::mutex> lock(m_sessionsMutex);
+        return m_activeSessions.size();
+    }
+
     std::unordered_map<std::string, FlightStatistics> AircraftSessionManager::GetActiveStatisticsSnapshot() const
     {
         std::vector<std::pair<std::string, std::shared_ptr<SessionEntry>>> sessions;

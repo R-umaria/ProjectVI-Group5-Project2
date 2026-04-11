@@ -6,6 +6,7 @@
 #include "../shared/Config.h"
 #include "../shared/Logger.h"
 #include "../shared/Common.h"
+#include "../shared/PathUtils.h"
 
 #include <algorithm>
 #include <thread>
@@ -109,10 +110,11 @@ namespace FleetTelemetry
 
         std::string SelectRandomTelemetryFile()
         {
-            std::vector<std::string> files = FindTelemetryFiles("data/sample");
+            const auto sampleDirectory = FleetTelemetry::PathUtils::ResolveExistingPath("data/sample");
+            std::vector<std::string> files = FindTelemetryFiles(sampleDirectory.string());
             if (files.empty())
             {
-                return "data/sample/telemetry_1.txt";
+                return FleetTelemetry::PathUtils::ResolveExistingPath("data/sample/telemetry_1.txt").string();
             }
 
             std::sort(files.begin(), files.end());
@@ -124,7 +126,7 @@ namespace FleetTelemetry
             RuntimeOptions options;
             options.ServerIp = config.ServerIp;
             options.ServerPort = config.ServerPort;
-            options.TelemetryFile = config.TelemetryFile;
+            options.TelemetryFile = FleetTelemetry::PathUtils::ResolveExistingPath(config.TelemetryFile).string();
             options.SendIntervalMs = config.SendIntervalMs;
 
             for (int index = 1; index < argc; ++index)
@@ -150,6 +152,7 @@ namespace FleetTelemetry
                 else if (argument == "--telemetry-file")
                 {
                     readValue(options.TelemetryFile);
+                    options.TelemetryFile = FleetTelemetry::PathUtils::ResolveExistingPath(options.TelemetryFile).string();
                 }
                 else if (argument == "--aircraft-id")
                 {
@@ -234,10 +237,12 @@ namespace FleetTelemetry
 
     int ClientApp::Run(int argc, char* argv[]) const
     {
-        const auto config = Config::LoadClientConfig("config/client.config.json");
+        const auto configPath = FleetTelemetry::PathUtils::ResolveExistingPath("config/client.config.json");
+        const auto config = Config::LoadClientConfig(configPath.string());
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
-        Logger logger("output/logs/" + options.AircraftId + ".log", false);
+        const auto logPath = FleetTelemetry::PathUtils::ResolveWritablePath("output/logs/" + options.AircraftId + ".log");
+        Logger logger(logPath.string(), false);
         logger.Info("Client starting");
         logger.Info("Aircraft ID: " + options.AircraftId);
         logger.Info("Telemetry file: " + options.TelemetryFile);

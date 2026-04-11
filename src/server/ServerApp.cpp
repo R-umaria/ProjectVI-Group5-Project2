@@ -5,6 +5,7 @@
 #include "../shared/Config.h"
 #include "../shared/Logger.h"
 #include "../shared/Common.h"
+#include "../shared/PathUtils.h"
 #include <thread>
 
 namespace FleetTelemetry
@@ -24,8 +25,8 @@ namespace FleetTelemetry
             RuntimeOptions options;
             options.BindIp = config.BindIp;
             options.ListenPort = config.ListenPort;
-            options.StatsFile = config.StatsFile;
-            options.LogFile = config.LogFile;
+            options.StatsFile = FleetTelemetry::PathUtils::ResolveWritablePath(config.StatsFile).string();
+            options.LogFile = FleetTelemetry::PathUtils::ResolveWritablePath(config.LogFile).string();
 
             for (int index = 1; index < argc; ++index)
             {
@@ -52,10 +53,12 @@ namespace FleetTelemetry
                 else if (argument == "--stats-file")
                 {
                     readValue(options.StatsFile);
+                    options.StatsFile = FleetTelemetry::PathUtils::ResolveWritablePath(options.StatsFile).string();
                 }
                 else if (argument == "--log-file")
                 {
                     readValue(options.LogFile);
+                    options.LogFile = FleetTelemetry::PathUtils::ResolveWritablePath(options.LogFile).string();
                 }
             }
 
@@ -65,7 +68,8 @@ namespace FleetTelemetry
 
     int ServerApp::Run(int argc, char* argv[]) const
     {
-        const auto config = Config::LoadServerConfig("config/server.config.json");
+        const auto configPath = FleetTelemetry::PathUtils::ResolveExistingPath("config/server.config.json");
+        const auto config = Config::LoadServerConfig(configPath.string());
         const RuntimeOptions options = ResolveRuntimeOptions(config, argc, argv);
 
         Logger logger(options.LogFile, true);

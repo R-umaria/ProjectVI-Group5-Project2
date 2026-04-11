@@ -50,7 +50,7 @@
   <PropertyGroup>
     <OutDir>$(SolutionDir)x64\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)x64\$(Configuration)\ServerApp\</IntDir>
-    <TargetName>ServerApp</TargetName>
+    <TargetName>Server</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

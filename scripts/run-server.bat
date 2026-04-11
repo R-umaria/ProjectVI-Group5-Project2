@@ -2,8 +2,8 @@
 setlocal
 pushd %~dp0..\
 
-set "EXE=x64\Debug\ServerApp.exe"
-if not exist "%EXE%" set "EXE=x64\Release\ServerApp.exe"
+set "EXE=x64\Debug\Server.exe"
+if not exist "%EXE%" set "EXE=x64\Release\Server.exe"
 if not exist "%EXE%" (
   echo Build the solution first from Visual Studio.
   popd

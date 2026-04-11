@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <cstddef>
 
 namespace FleetTelemetry
 {
@@ -19,6 +20,7 @@ namespace FleetTelemetry
         void AcceptRecord(const TelemetryRecord& record);
         bool CompleteFlight(const std::string& aircraftId, FlightStatistics& outStatistics);
         std::unordered_map<std::string, FlightStatistics> GetActiveStatisticsSnapshot() const;
+        std::size_t GetActiveSessionCount() const;
 
     private:
         struct SessionEntry

@@ -64,7 +64,7 @@ namespace FleetTelemetry
                 + ": " + std::to_string(malformedPackets - 3));
         }
 
-        if (!aircraftId.empty())
+        if (!aircraftId.empty() && processedPackets > 0)
         {
             FlightStatistics finalStatistics;
             if (m_sessionManager.CompleteFlight(aircraftId, finalStatistics))
@@ -74,7 +74,8 @@ namespace FleetTelemetry
                     " (flight #" + std::to_string(finalStatistics.FlightCount) + ")" +
                     ". Packets processed = " + std::to_string(processedPackets) +
                     ". This flight avg fuel/hr = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour) +
-                    ". Overall avg fuel/hr = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour));
+                    ". Overall avg fuel/hr = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour) +
+                    ". Active sessions remaining = " + std::to_string(m_sessionManager.GetActiveSessionCount()));
             }
         }
 
