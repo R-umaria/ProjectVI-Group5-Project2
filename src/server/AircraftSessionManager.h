@@ -17,6 +17,7 @@ namespace FleetTelemetry
         void AcceptRecord(const TelemetryRecord& record);
         bool CompleteFlight(const std::string& aircraftId, bool crashed, FlightStatistics& outStatistics);
         std::unordered_map<std::string, FlightStatistics> GetActiveStatisticsSnapshot() const;
+        void LostConnectionFlight(const std::string& aircraftId);
 
     private:
         std::string m_statsFilePath;

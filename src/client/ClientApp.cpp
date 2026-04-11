@@ -42,7 +42,7 @@ namespace FleetTelemetry
             const int id = ++g_aircraftSequence;
 
             std::ostringstream stream;
-            stream << "AIRCRAFT-" << std::setw(3) << std::setfill('0') << id;
+            stream << "AIRCRAFT-" << std::setw(25) << std::setfill('0') << id;
             return stream.str();
         }
 

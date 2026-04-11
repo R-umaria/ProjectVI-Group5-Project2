@@ -85,7 +85,7 @@ namespace FleetTelemetry
         logger.Info("Persisting completed flight statistics to " + options.StatsFile);
 
         AircraftSessionManager sessions(options.StatsFile, logger);
-        std::vector<std::thread> workerThreads;
+        //std::vector<std::thread> workerThreads;
 
         while (true)
         {
@@ -99,12 +99,13 @@ namespace FleetTelemetry
                 continue;
             }
 
-            workerThreads.emplace_back([clientSocket, remoteAddress, &sessions, &logger]() mutable
+            //workerThreads.emplace_back([clientSocket, remoteAddress, &sessions, &logger]() mutable
+            std::thread([clientSocket, remoteAddress, &sessions, &logger]() mutable //TO FIX MEMORY ISSUES
             {
                 ClientHandler handler(clientSocket, std::move(remoteAddress), sessions, logger);
                 handler.Run();
-            });
-            workerThreads.back().detach();
+				}).detach(); //added detach and changed from emplace/back to just creating a temporary thread since we don't need to keep track of them. If we wanted to keep track of them, we would need to join them at some point, but since they are detached, they will clean up after themselves when they finish.
+            //workerThreads.back().detach();
         }
 
         return 0;

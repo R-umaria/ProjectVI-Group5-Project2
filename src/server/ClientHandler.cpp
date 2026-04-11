@@ -66,9 +66,6 @@ namespace FleetTelemetry
         }
 
         if (!aircraftId.empty())
-        {
-            FlightStatistics finalStatistics;
-            if (!aircraftId.empty())
             {
                 FlightStatistics finalStatistics;
 
@@ -92,7 +89,6 @@ namespace FleetTelemetry
                 {
                     m_logger.Error("Failed to finalize flight for " + aircraftId);
                 }
-            }
         }
 
         Network::ShutdownSocket(m_clientSocket);
