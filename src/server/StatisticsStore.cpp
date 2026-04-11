@@ -9,9 +9,10 @@ namespace FleetTelemetry
         void WriteHeader(std::ofstream& output)
         {
             output << "AircraftId,StartTimestamp,EndTimestamp,StartFuel,EndFuel,"
-                "FuelConsumed,CurrentFuelConsumptionPerSecond,AverageFuelConsumptionPerSecond,"
-                "AverageFuelConsumptionPerHour,TotalFlightSeconds,SampleCount,Completed,"
-                "FlightCount,CumulativeFuelConsumed,CumulativeTotalSeconds,OverallAverageFuelConsumptionPerHour\n";
+                << "FuelConsumed,CurrentFuelConsumptionPerSecond,AverageFuelConsumptionPerSecond,"
+                << "AverageFuelConsumptionPerHour,TotalFlightSeconds,SampleCount,Completed,"
+                << "PartialFlight,TerminationReason,"
+                << "FlightCount,CumulativeFuelConsumed,CumulativeTotalSeconds,OverallAverageFuelConsumptionPerHour\n";
         }
 
         void WriteStatsRow(std::ofstream& output, const FlightStatistics& value)
@@ -28,6 +29,8 @@ namespace FleetTelemetry
                    << value.TotalFlightSeconds << ','
                    << value.SampleCount << ','
                    << (value.Completed ? "true" : "false") << ','
+                   << (value.PartialFlight ? "true" : "false") << ','
+                   << value.TerminationReason << ','
                    << value.FlightCount << ','
                    << value.CumulativeFuelConsumed << ','
                    << value.CumulativeTotalSeconds << ','

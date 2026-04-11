@@ -18,7 +18,8 @@ namespace FleetTelemetry
         double TotalFlightSeconds = 0.0;
         int SampleCount = 0;
         bool Completed = false;
-
+        bool PartialFlight = false;
+        std::string TerminationReason;
         //so that we can continue to track the average for 
         //the same airplane over multiple flights
         int FlightCount = 0;                          // how many completed flights for this plane

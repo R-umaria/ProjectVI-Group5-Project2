@@ -11,7 +11,7 @@ namespace FleetTelemetry
     {
     public:
         void Process(const TelemetryRecord& record);
-        bool FinalizeFlight(const std::string& aircraftId, FlightStatistics& outStatistics);
+        bool FinalizeFlight(const std::string& aircraftId, bool crashed, FlightStatistics& outStatistics);
         std::unordered_map<std::string, FlightStatistics> GetCurrentStatistics() const;
 
     private:

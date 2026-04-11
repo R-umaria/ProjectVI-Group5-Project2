@@ -11,9 +11,9 @@ namespace
 {
     struct LaunchOptions
     {
-        int ClientCount = 3;
+        int ClientCount = 25;
         int AircraftStart = 1;
-        int AircraftEnd = 3;
+        int AircraftEnd = 25;
     };
 
     int ParseIntOrDefault(const char* text, int defaultValue)

@@ -42,13 +42,9 @@ namespace FleetTelemetry
             const int id = ++g_aircraftSequence;
 
             std::ostringstream stream;
-            stream << "AIRCRAFT-" << std::setw(3) << std::setfill('0') << id;
+            stream << "AIRCRAFT-" << std::setw(25) << std::setfill('0') << id;
             return stream.str();
         }
-
-#include <filesystem>
-#include <vector>
-#include <string>
 
         std::vector<std::string> FindTelemetryFiles(const std::string& directoryPath)
         {
@@ -84,7 +80,7 @@ namespace FleetTelemetry
             return files;
         }
 
-        /*std::string SelectRandomTelemetryFile()
+        std::string SelectRandomTelemetryFile()
         {
             std::vector<std::string> files = FindTelemetryFiles("data/sample");
 
@@ -98,13 +94,6 @@ namespace FleetTelemetry
             std::cout << "Found " << files.size() << " telemetry files in data/sample\n";
             
             return files[dist(gen)];
-        }*/
-
-        std::string SelectRandomTelemetryFile()
-        {
-            std::mt19937 gen(std::random_device{}());
-            std::uniform_int_distribution<int> dist(1, 4);
-            return "data/sample/telemetry_" + std::to_string(dist(gen)) + ".txt";
         }
 
         RuntimeOptions ResolveRuntimeOptions(const ClientConfig& config, int argc, char* argv[])

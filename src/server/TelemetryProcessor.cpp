@@ -63,23 +63,43 @@ namespace FleetTelemetry
         flightState.PreviousFuelQuantity = record.FuelQuantity;
     }
 
-    bool TelemetryProcessor::FinalizeFlight(const std::string& aircraftId, FlightStatistics& outStatistics)
+    bool TelemetryProcessor::FinalizeFlight(const std::string& aircraftId, bool crashed, FlightStatistics& outStatistics)
     {
-        const auto iterator = m_activeFlights.find(aircraftId);
-        if (iterator == m_activeFlights.end())
+        const auto it = m_activeFlights.find(aircraftId);
+        if (it == m_activeFlights.end())
         {
             return false;
         }
 
-        outStatistics = iterator->second.Statistics;
-        outStatistics.Completed = true;
-        outStatistics.FuelConsumed = std::max(outStatistics.FuelConsumed, std::max(0.0, outStatistics.StartFuel - outStatistics.EndFuel));
+        outStatistics = it->second.Statistics;
+
+        outStatistics.FuelConsumed =
+            std::max(outStatistics.FuelConsumed,
+                std::max(0.0, outStatistics.StartFuel - outStatistics.EndFuel));
+
         if (outStatistics.TotalFlightSeconds > 0.0)
         {
-            outStatistics.AverageFuelConsumptionPerSecond = outStatistics.FuelConsumed / outStatistics.TotalFlightSeconds;
-            outStatistics.AverageFuelConsumptionPerHour = outStatistics.AverageFuelConsumptionPerSecond * 3600.0;
+            outStatistics.AverageFuelConsumptionPerSecond =
+                outStatistics.FuelConsumed / outStatistics.TotalFlightSeconds;
+
+            outStatistics.AverageFuelConsumptionPerHour =
+                outStatistics.AverageFuelConsumptionPerSecond * 3600.0;
         }
-        m_activeFlights.erase(iterator);
+
+        if (crashed)
+        {
+            outStatistics.Completed = false;
+            outStatistics.PartialFlight = true;
+            outStatistics.TerminationReason = "ClientCrash";
+        }
+        else
+        {
+            outStatistics.Completed = true;
+            outStatistics.PartialFlight = false;
+            outStatistics.TerminationReason = "NormalDisconnect";
+        }
+
+        m_activeFlights.erase(it);
         return true;
     }
 

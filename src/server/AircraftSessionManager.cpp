@@ -14,10 +14,10 @@ namespace FleetTelemetry
         m_processor.Process(record);
     }
 
-    bool AircraftSessionManager::CompleteFlight(const std::string& aircraftId, FlightStatistics& outStatistics)
+    bool AircraftSessionManager::CompleteFlight(const std::string& aircraftId, bool crashed, FlightStatistics& outStatistics)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_processor.FinalizeFlight(aircraftId, outStatistics))
+        if (!m_processor.FinalizeFlight(aircraftId, crashed, outStatistics))
         {
             return false;
         }
@@ -46,6 +46,14 @@ namespace FleetTelemetry
         }
 
         return true;
+    }
+
+	//fix for memory issues where if a client disconnects without completing the flight, clear it from the map to prevent mem leaks
+    void AircraftSessionManager::LostConnectionFlight(const std::string& aircraftId)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        FlightStatistics discarded;
+        m_processor.FinalizeFlight(aircraftId, true, discarded);// clears it from the map
     }
 
     std::unordered_map<std::string, FlightStatistics> AircraftSessionManager::GetActiveStatisticsSnapshot() const
