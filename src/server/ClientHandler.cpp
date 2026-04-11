@@ -76,6 +76,7 @@ namespace FleetTelemetry
                     ". This flight avg fuel/hr = " + std::to_string(finalStatistics.AverageFuelConsumptionPerHour) +
                     ". Overall avg fuel/hr = " + std::to_string(finalStatistics.OverallAverageFuelConsumptionPerHour) +
                     ". Active sessions remaining = " + std::to_string(m_sessionManager.GetActiveSessionCount()));
+                m_logger.Info("Released in-memory session state for " + aircraftId);
             }
         }
 

@@ -2,10 +2,10 @@
 setlocal enabledelayedexpansion
 pushd %~dp0
 
-set "EXE=x64\Release\ClientApp.exe"
-if not exist "%EXE%" set "EXE=x64\Debug\ClientApp.exe"
+set "EXE=x64\Release\Client.exe"
+if not exist "%EXE%" set "EXE=x64\Debug\Client.exe"
 if not exist "%EXE%" (
-    echo Build ClientApp first.
+    echo Build Client first.
     popd
     exit /b 1
 )
@@ -16,7 +16,7 @@ if not "%~1"=="" set /A count=%~1
 set /A aircraftStart=1
 if not "%~2"=="" set /A aircraftStart=%~2
 
-set "aircraftPrefix=AIRCRAFT"
+set "aircraftPrefix=AIR"
 if not "%~3"=="" set "aircraftPrefix=%~3"
 
 set "serverIp=%~4"
@@ -32,9 +32,12 @@ set /A index=0
 :while
 if !index! lss %count% (
     set /A aircraftNumber=%aircraftStart% + !index!
-    start "Client-!aircraftNumber!" /min "%EXE%" --aircraft-id %aircraftPrefix%-!aircraftNumber! !extraArgs!
+    set "aircraftId=%aircraftPrefix%_!aircraftNumber!"
+    if !aircraftNumber! lss 10 set "aircraftId=%aircraftPrefix%_00!aircraftNumber!"
+    if !aircraftNumber! geq 10 if !aircraftNumber! lss 100 set "aircraftId=%aircraftPrefix%_0!aircraftNumber!"
+    start "Client-!aircraftNumber!" /min "%EXE%" --aircraft-id !aircraftId! !extraArgs!
     set /A index=!index! + 1
-    @echo Spawned %aircraftPrefix%-!aircraftNumber!
+    @echo Spawned !aircraftId!
     goto :while
 )
 

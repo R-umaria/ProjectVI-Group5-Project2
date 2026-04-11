@@ -37,7 +37,11 @@ namespace FleetTelemetry
             double OverallAverageFuelConsumptionPerHour = 0.0;
         };
 
-        std::shared_ptr<SessionEntry> FindOrCreateSession(const std::string& aircraftId);
+        SessionEntry* FindOrCreateSession(const std::string& aircraftId);
+        std::string BuildHistoryFilePath() const;
+        AircraftHistoryEntry LoadPersistedHistory(const std::string& aircraftId) const;
+        bool SavePersistedHistory(const std::string& aircraftId, const AircraftHistoryEntry& history);
+        void MaybeCompactSessionStorageLocked();
 
         std::string m_statsFilePath;
         Logger& m_logger;
@@ -45,9 +49,8 @@ namespace FleetTelemetry
         StatisticsStore m_statisticsStore;
 
         mutable std::mutex m_sessionsMutex;
-        std::unordered_map<std::string, std::shared_ptr<SessionEntry>> m_activeSessions;
+        std::unordered_map<std::string, std::unique_ptr<SessionEntry>> m_activeSessions;
 
-        mutable std::mutex m_historyMutex;
-        std::unordered_map<std::string, AircraftHistoryEntry> m_aircraftHistory;
+        mutable std::mutex m_historyFileMutex;
     };
 }

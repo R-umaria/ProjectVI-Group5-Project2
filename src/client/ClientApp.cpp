@@ -17,6 +17,10 @@
 #include <filesystem>
 #include <iostream>
 #include <mutex>
+#include <fstream>
+#include <iomanip>
+#include <random>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,6 +40,7 @@ namespace FleetTelemetry
             std::string AircraftId;
             int SendIntervalMs = 0;
             bool AircraftIdProvidedByUser = false;
+            bool TelemetryFileProvidedByUser = false;
             bool VerboseRecords = false;
             bool UseRandomTelemetryFile = false;
         };
@@ -63,15 +68,131 @@ namespace FleetTelemetry
 #endif
         }
 
-        std::string BuildGeneratedAircraftId()
+        class CounterLock
         {
-            const auto nowValue = std::chrono::system_clock::now().time_since_epoch();
-            const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(nowValue).count();
+        public:
+            explicit CounterLock(std::filesystem::path lockPath) :
+                m_lockPath(std::move(lockPath))
+            {
+            }
 
+            ~CounterLock()
+            {
+                Release();
+            }
+
+            CounterLock(const CounterLock&) = delete;
+            CounterLock& operator=(const CounterLock&) = delete;
+
+            bool Acquire()
+            {
+                namespace fs = std::filesystem;
+                std::error_code ec;
+                fs::create_directories(m_lockPath.parent_path(), ec);
+
+                for (int attempt = 0; attempt < 200; ++attempt)
+                {
+                    if (fs::create_directory(m_lockPath, ec))
+                    {
+                        m_acquired = true;
+                        return true;
+                    }
+
+                    ec.clear();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                }
+
+                return false;
+            }
+
+        private:
+            void Release()
+            {
+                if (!m_acquired)
+                {
+                    return;
+                }
+
+                std::error_code ec;
+                std::filesystem::remove_all(m_lockPath, ec);
+                m_acquired = false;
+            }
+
+            std::filesystem::path m_lockPath;
+            bool m_acquired = false;
+        };
+
+        int ReadIntFromFile(const std::filesystem::path& filePath, int fallback)
+        {
+            std::ifstream input(filePath);
+            if (!input)
+            {
+                return fallback;
+            }
+
+            int value = fallback;
+            input >> value;
+            return input ? value : fallback;
+        }
+
+        bool WriteIntToFile(const std::filesystem::path& filePath, int value)
+        {
+            std::ofstream output(filePath, std::ios::trunc);
+            if (!output)
+            {
+                return false;
+            }
+
+            output << value;
+            output.flush();
+            return static_cast<bool>(output);
+        }
+
+        int ReadAircraftIdOffset()
+        {
+            const char* offsetText = std::getenv("FLEET_AIRCRAFT_ID_OFFSET");
+            if (offsetText == nullptr || *offsetText == '\0')
+            {
+                return 0;
+            }
+
+            return std::max(0, ParseIntOrDefault(offsetText, 0));
+        }
+
+        std::string ResolveAircraftPrefix(const std::string& configuredPrefix)
+        {
+            const char* environmentPrefix = std::getenv("FLEET_AIRCRAFT_PREFIX");
+            if (environmentPrefix != nullptr && *environmentPrefix != '\0')
+            {
+                return environmentPrefix;
+            }
+
+            return configuredPrefix.empty() ? std::string("Aircraft") : configuredPrefix;
+        }
+
+        std::string FormatAircraftId(const std::string& prefix, int aircraftNumber)
+        {
             std::ostringstream stream;
-            stream << "AIRCRAFT-P" << GetCurrentProcessIdValue()
-                   << "-T" << milliseconds;
+            stream << prefix << '_' << std::setw(3) << std::setfill('0') << aircraftNumber;
             return stream.str();
+        }
+
+        std::string BuildGeneratedAircraftId(const std::string& configuredPrefix)
+        {
+            const auto counterFile = FleetTelemetry::PathUtils::ResolveWritablePath("output/state/aircraft_id_counter.txt");
+            const auto lockPath = FleetTelemetry::PathUtils::ResolveWritablePath("output/state/aircraft_id_counter.lock");
+            const std::string prefix = ResolveAircraftPrefix(configuredPrefix);
+            const int offset = ReadAircraftIdOffset();
+
+            CounterLock lock(lockPath);
+            if (lock.Acquire())
+            {
+                const int nextLocalSequence = ReadIntFromFile(counterFile, 0) + 1;
+                (void)WriteIntToFile(counterFile, nextLocalSequence);
+                return FormatAircraftId(prefix, offset + nextLocalSequence);
+            }
+
+            return FormatAircraftId(prefix, offset + static_cast<int>(GetCurrentProcessIdValue() % 1000UL));
         }
 
         std::vector<std::string> FindTelemetryFiles(const std::string& directoryPath)
@@ -118,7 +239,19 @@ namespace FleetTelemetry
             }
 
             std::sort(files.begin(), files.end());
-            return files.front();
+
+            std::random_device randomDevice;
+            const auto nowTicks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+            std::seed_seq seed
+            {
+                static_cast<unsigned int>(randomDevice()),
+                static_cast<unsigned int>(GetCurrentProcessIdValue()),
+                static_cast<unsigned int>(nowTicks & 0xffffffff),
+                static_cast<unsigned int>((nowTicks >> 32) & 0xffffffff)
+            };
+            std::mt19937 generator(seed);
+            std::uniform_int_distribution<std::size_t> distribution(0, files.size() - 1);
+            return files[distribution(generator)];
         }
 
         RuntimeOptions ResolveRuntimeOptions(const ClientConfig& config, int argc, char* argv[])
@@ -153,6 +286,7 @@ namespace FleetTelemetry
                 {
                     readValue(options.TelemetryFile);
                     options.TelemetryFile = FleetTelemetry::PathUtils::ResolveExistingPath(options.TelemetryFile).string();
+                    options.TelemetryFileProvidedByUser = !options.TelemetryFile.empty();
                 }
                 else if (argument == "--aircraft-id")
                 {
@@ -174,6 +308,7 @@ namespace FleetTelemetry
             }
 
             if (options.UseRandomTelemetryFile ||
+                !options.TelemetryFileProvidedByUser ||
                 options.TelemetryFile.empty() ||
                 !std::filesystem::exists(options.TelemetryFile))
             {
@@ -182,7 +317,7 @@ namespace FleetTelemetry
 
             if (!options.AircraftIdProvidedByUser)
             {
-                options.AircraftId = BuildGeneratedAircraftId();
+                options.AircraftId = BuildGeneratedAircraftId(config.ClientName);
             }
 
             if (options.SendIntervalMs < 0)

@@ -24,7 +24,7 @@ namespace
         int ClientCount = 1;
         int AircraftStart = 1;
         int AircraftEnd = 1;
-        std::string AircraftPrefix = "AIRCRAFT";
+        std::string AircraftPrefix = "AIR";
     };
 
     int ParseIntOrDefault(const char* text, int defaultValue)
@@ -111,7 +111,7 @@ namespace
 
         if (options.AircraftPrefix.empty())
         {
-            options.AircraftPrefix = "AIRCRAFT";
+            options.AircraftPrefix = "AIR";
         }
 
         return options;
@@ -120,7 +120,7 @@ namespace
     std::string BuildAircraftId(const std::string& prefix, int aircraftNumber)
     {
         std::ostringstream stream;
-        stream << prefix << '-';
+        stream << prefix << '_';
 
         if (aircraftNumber < 10)
         {
