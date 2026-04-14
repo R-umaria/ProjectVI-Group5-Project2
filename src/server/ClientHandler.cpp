@@ -1,3 +1,9 @@
+/*!
+ * @file ClientHandler.cpp
+ * @brief Handles communication with a connected client.
+ *
+ * This module receives telemetry data from clients, processes packets and updates flight statistics.
+ */
 #include "ClientHandler.h"
 #include "../shared/Network.h"
 

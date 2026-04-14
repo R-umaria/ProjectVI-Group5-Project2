@@ -1,3 +1,9 @@
+/*!
+ * @file TelemetryReader.cpp
+ * @brief Reads telemetry data from input files.
+ *
+ * This module handles opening files, reading lines and managing file access for telemetry data.
+ */
 #include "TelemetryReader.h"
 
 namespace FleetTelemetry

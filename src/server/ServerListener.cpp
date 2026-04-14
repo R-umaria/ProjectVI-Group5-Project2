@@ -1,3 +1,9 @@
+/*!
+ * @file ServerListener.cpp
+ * @brief Listens for incoming client connections.
+ *
+ * This module sets up the server socket, accepts client connections and manages the listening state.
+ */
 #include "ServerListener.h"
 #include "../shared/Network.h"
 

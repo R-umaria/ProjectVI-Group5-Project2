@@ -1,3 +1,9 @@
+/*!
+ * @file PacketReceiver.cpp
+ * @brief Receives and processes incoming packets.
+ *
+ * This module reads data from sockets, extracts complete lines and converts them into telemetry records.
+ */
 #include "PacketReceiver.h"
 #include "../shared/Packet.h"
 #include "../shared/Network.h"

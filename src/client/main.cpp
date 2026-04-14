@@ -1,3 +1,14 @@
+/*!
+ * @mainpage FleetTelemetrySystem
+ *
+ * This project simulates multiple aircraft sending telemetry data to a server using a multithreaded client-server system.
+ */
+/*!
+ * @file main.cpp
+ * @brief Runs multiple clients.
+ *
+ * This program creates several client threads, assigns each one a unique aircraft ID, and runs the client application.
+ */
 #include "ClientApp.h"
 
 #include <thread>
