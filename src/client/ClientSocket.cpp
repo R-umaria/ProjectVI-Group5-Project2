@@ -2,121 +2,159 @@
  * @file ClientSocket.cpp
  * @brief Handles TCP client socket operations such as connecting, sending data and disconnecting from the server.
  */
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "ClientSocket.h"
 #include "../shared/Network.h"
+#include <iostream>
 #include <string>
 
-namespace FleetTelemetry
-{
-    ClientSocket::~ClientSocket()
-    {
-        Disconnect();
-        Network::Cleanup();
+using namespace FleetTelemetry;
+
+ClientSocket::~ClientSocket() {
+    Disconnect();
+}
+
+bool ClientSocket::Connect(const std::string& hostname, int port, std::string* errorMessage) {
+
+    Disconnect();
+
+    if (!Network::Initialize(errorMessage)) {
+        return false;
     }
 
-    bool ClientSocket::Connect(const std::string& ipAddress, int port, std::string* errorMessage)
+    addrinfo hints{};
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    addrinfo* listOfServerSocketAddr = nullptr;
+
+    std::string portStr = std::to_string(port);
+
+    int status = getaddrinfo(hostname.c_str(), portStr.c_str(), &hints, &listOfServerSocketAddr);
+    if (status != 0)
     {
-        Disconnect();
-
-        if (!Network::Initialize(errorMessage))
-        {
-            return false;
-        }
-
-        addrinfo hints{};
-        hints.ai_family = AF_INET;
-        if (ipAddress.find(":") != std::string::npos)
-        {
-            hints.ai_family = AF_INET6;
-        }
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-
-        addrinfo* resultList = nullptr;
-        const std::string portText = std::to_string(port);
-        const int resolveResult = getaddrinfo(ipAddress.c_str(), portText.c_str(), &hints, &resultList);
-        if (resolveResult != 0 || resultList == nullptr)
+        if (errorMessage != nullptr)
         {
 #ifdef _WIN32
-            if (errorMessage != nullptr)
-            {
-                *errorMessage = "getaddrinfo failed with error " + std::to_string(resolveResult);
-            }
+            * errorMessage = "getaddrinfo failed (code: " + std::to_string(status) + ")";
 #else
-            if (errorMessage != nullptr)
-            {
-                *errorMessage = gai_strerror(resolveResult);
-            }
+            * errorMessage = gai_strerror(status);
 #endif
-            Network::Cleanup();
-            return false;
         }
 
-        bool connected = false;
-        std::string lastConnectError = "Unable to connect to server";
-        for (addrinfo* current = resultList; current != nullptr; current = current->ai_next)
-        {
-            m_socket = socket(current->ai_family, current->ai_socktype, current->ai_protocol);
-            if (m_socket == InvalidSocket)
-            {
-                lastConnectError = Network::GetLastErrorString();
-                continue;
-            }
-
-            if (connect(m_socket, current->ai_addr, static_cast<int>(current->ai_addrlen)) == 0)
-            {
-                connected = true;
-                break;
-            }
-
-            lastConnectError = Network::GetLastErrorString();
-            Network::CloseSocket(m_socket);
-            m_socket = InvalidSocket;
-        }
-
-        freeaddrinfo(resultList);
-
-        if (!connected)
-        {
-            if (errorMessage != nullptr)
-            {
-                *errorMessage = lastConnectError;
-            }
-            Network::Cleanup();
-            return false;
-        }
-
-        m_connected = true;
-        return true;
+        return false;
     }
 
-    bool ClientSocket::SendLine(const std::string& line, std::string* errorMessage)
+    addrinfo* iterator = nullptr;
+
+    std::string lastConnectError = "Unable to connect to server";
+
+    for (iterator = listOfServerSocketAddr;
+        iterator != nullptr;
+        iterator = iterator->ai_next)
     {
-        if (!m_connected)
-        {
-            if (errorMessage != nullptr)
-            {
-                *errorMessage = "Socket is not connected";
-            }
-            return false;
+        clientSocket = socket(
+            iterator->ai_family,
+            iterator->ai_socktype,
+            iterator->ai_protocol
+        );
+
+        if (clientSocket == InvalidSocket) {
+            lastConnectError = Network::GetLastErrorString(); 
+            continue;
         }
 
-        return Network::SendAll(m_socket, line + "\n", errorMessage);
-    }
+        if (connect(clientSocket,
+            iterator->ai_addr,
+            static_cast<int>(iterator->ai_addrlen)) == 0) {
 
-    void ClientSocket::Disconnect()
-    {
-        if (m_socket != InvalidSocket)
-        {
-            Network::ShutdownSocket(m_socket);
-            Network::CloseSocket(m_socket);
-            m_socket = InvalidSocket;
+            break;
         }
-        m_connected = false;
+
+        lastConnectError = Network::GetLastErrorString(); 
+
+        Network::CloseSocket(clientSocket);
+        clientSocket = InvalidSocket;
     }
 
-    bool ClientSocket::IsConnected() const
-    {
-        return m_connected;
+    freeaddrinfo(listOfServerSocketAddr);
+
+    if (iterator == nullptr) {
+
+        if (errorMessage != nullptr) {
+            *errorMessage = lastConnectError; 
+        }
+
+        return false;
     }
+
+    isConnected = true;
+    return true;
+}
+
+void ClientSocket::Disconnect() {
+
+    if (clientSocket == InvalidSocket) {
+        isConnected = false;
+        return;
+    }
+
+    Network::ShutdownSocket(clientSocket);
+    Network::CloseSocket(clientSocket);
+
+    clientSocket = InvalidSocket;
+    isConnected = false;
+}
+
+bool ClientSocket::IsConnected() const {
+    return isConnected;
+}
+/*
+bool ClientSocket::SendLine(const std::string& line, std::string* errorMessage) {
+    if (!isConnected) {
+
+        if (errorMessage != nullptr) {
+            *errorMessage = "Socket is not connected properly";
+        }
+
+        return false;
+    }
+
+    return Network::SendAll(clientSocket, line + "\n", errorMessage);
+}
+*/
+
+// To see if the packets are being sent
+bool ClientSocket::SendLine(const std::string& line, std::string* errorMessage) {
+    if (!isConnected) {
+
+        if (errorMessage != nullptr) {
+            *errorMessage = "Socket is not connected properly";
+        }
+
+        std::cout << "[ERROR] Socket is not connected properly\n";
+        return false;
+    }
+
+    //static int counter = 0;
+    int counter = 0;   
+    ++counter;            
+
+    //std::cout << "[SEND] " << line << std::endl;
+
+    bool result = Network::SendAll(clientSocket, line + "\n", errorMessage);
+
+    if (result){
+
+        if (counter % 100 == 0)  {
+            std::cout << "[INFO] Sent " << counter << " packets\n";
+        }
+    }
+
+    else{
+        std::cout << "[FAIL] Send package is failed!\n";
+    }
+
+    return result;
 }
