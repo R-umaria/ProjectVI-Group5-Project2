@@ -1,3 +1,9 @@
+/*!
+ * @file TelemetryProcessor.cpp
+ * @brief Processes telemetry data and calculates flight statistics.
+ *
+ * This module updates flight data for each aircraft and computes fuel consumption and timing information.
+ */
 #include "TelemetryProcessor.h"
 #include "../shared/TimeUtils.h"
 #include <algorithm>

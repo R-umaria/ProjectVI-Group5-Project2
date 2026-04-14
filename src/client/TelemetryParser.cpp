@@ -1,3 +1,9 @@
+/*!
+ * @file TelemetryParser.cpp
+ * @brief Parses telemetry data from input lines.
+ *
+ * This module reads raw telemetry lines, extracts timestamp and fuel values and converts them into structured telemetry records.
+ */
 #include "TelemetryParser.h"
 #include "../shared/Common.h"
 #include <sstream>

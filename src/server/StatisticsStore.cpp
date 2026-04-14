@@ -1,3 +1,9 @@
+/*!
+ * @file StatisticsStore.cpp
+ * @brief Stores flight statistics in CSV format.
+ *
+ * This module writes flight data and summaries to files for persistence and later analysis.
+ */
 #include "StatisticsStore.h"
 #include <fstream>
 #include <filesystem>

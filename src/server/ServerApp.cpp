@@ -1,3 +1,9 @@
+/*!
+ * @file ServerApp.cpp
+ * @brief Runs the server and handles incoming client connections.
+ *
+ * This module starts the server, listens for clients and creates handlers to process incoming telemetry data.
+ */
 #include "ServerApp.h"
 #include "ServerListener.h"
 #include "ClientHandler.h"

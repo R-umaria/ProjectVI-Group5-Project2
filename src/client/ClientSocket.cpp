@@ -1,3 +1,7 @@
+/*!
+ * @file ClientSocket.cpp
+ * @brief Handles TCP client socket operations such as connecting, sending data and disconnecting from the server.
+ */
 #include "ClientSocket.h"
 #include "../shared/Network.h"
 #include <string>

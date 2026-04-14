@@ -1,3 +1,9 @@
+/*!
+ * @file AircraftSessionManager.cpp
+ * @brief Manages aircraft sessions and flight statistics.
+ *
+ * This module processes incoming telemetry records, tracks flight data and maintains cumulative statistics for each aircraft.
+ */
 #include "AircraftSessionManager.h"
 
 namespace FleetTelemetry

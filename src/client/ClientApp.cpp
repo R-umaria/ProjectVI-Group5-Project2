@@ -1,3 +1,7 @@
+/*!
+ * @file ClientApp.cpp
+ * @brief Implements the client application responsible for reading telemetry data and sending it to the server.
+ */
 #include "ClientApp.h"
 #include "TelemetryReader.h"
 #include "TelemetryParser.h"
